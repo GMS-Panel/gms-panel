@@ -1,0 +1,190 @@
+================================================================
+GMS PANEL - KURULUM TALIMATI
+================================================================
+Versiyon : 2.0
+Github   : https://github.com/GMS-Panel/gms-panel
+================================================================
+
+Bu belge, GMS Panel kurulumu oncesinde yapilmasi gereken
+Alma Linux minimum sistem hazirligini adim adim anlatmaktadir.
+
+
+----------------------------------------------------------------
+BOLUM 1: MINIMUM SISTEM GEREKSINIMLERI
+----------------------------------------------------------------
+
+İşletim Sistemi : Alma Linux 9.x (Minimal Install)
+CPU              : En az 1 core (2 core onerilir)
+RAM              : En az 1 GB (2 GB onerilir)
+Disk             : En az 20 GB
+Network          : Statik IP (DHCP onerilmez)
+Internet         : Zorunlu (paket indirme ve SSL icin)
+
+
+----------------------------------------------------------------
+BOLUM 2: ALMA LINUX 9 KURULUMU
+----------------------------------------------------------------
+
+1. Alma Linux 9 ISO'sunu indirin:
+   https://almalinux.org/get-almalinux/
+   Dosya: AlmaLinux-9-latest-x86_64-minimal.iso
+
+2. ISO'yu VMware/Hyper-V/Sunucuya yukleyin ve baslatın.
+
+3. Kurulum ekraninda asagidaki ayarlari yapin:
+
+   [Dil Secimi]
+   - Istediginiz dili secin (Turkce desteklenmeyebilir)
+   - English (United States) onerilir
+
+   [Zaman Dilimi - Time & Date]
+   - Europe/Istanbul secin
+
+   [Yazilim Secimi - Software Selection]
+   - "Minimal Install" secin
+   - Hicbir ek paket secmeyin
+
+   [Disk Ayarlari - Installation Destination]
+   - Diski secin
+   - "Automatic" partitioning onerilir
+   - En az 20 GB alan olmali
+
+   [Network Ayarlari - Network & Hostname]
+   - Ag adaptorunu aktif edin (ON konumuna getirin)
+   - "Configure" tiklayin
+   - IPv4 Settings sekmesine gecin
+   - Method: "Manual" secin
+   - Add tiklayin ve bilgileri girin:
+     Address  : Sunucunuzun IP adresi
+     Netmask  : Alt ag maskesi (ornek: 255.255.255.248)
+     Gateway  : Ag gecidi
+   - DNS Servers: 8.8.8.8,8.8.4.4
+   - Save tiklayin
+   - Hostname: "panel" yazin (veya istediginiz bir isim)
+
+   [Root Sifresi - Root Password]
+   - Guclu bir sifre belirleyin
+   - NOT ALIN, unutmayin!
+
+   [Kullanici - User Creation]
+   - Bu adimi ATLAYIN, GMS Panel kendi kullanicisini olusturur
+
+4. "Begin Installation" tiklayin ve kurulumun bitmesini bekleyin.
+
+5. Kurulum bitince "Reboot System" tiklayin.
+
+
+----------------------------------------------------------------
+BOLUM 3: KURULUM SONRASI ILK AYARLAR
+----------------------------------------------------------------
+
+Sunucu yeniden basladiktan sonra asagidaki adimlari uygulayın.
+Bu islemler icin sunucuya fiziksel veya konsol erisiminiz olmali.
+
+-- ADIM 1: Root ile giris yapin --
+
+   Kullanici adi : root
+   Sifre         : Kurulumda belirlediginiz sifre
+
+
+-- ADIM 2: SSH Root girisi icin izin verin --
+
+   Varsayilan olarak Alma Linux 9'da root ile SSH girisine
+   izin verilmez. Asagidaki komutla aktif edin:
+
+   sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+   echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+   systemctl restart sshd
+
+   Artik PuTTY veya SSH ile root olarak baglanabilirsiniz.
+
+
+-- ADIM 3: Ag baglantisini test edin --
+
+   ping -c 4 8.8.8.8
+
+   Yanit geliyorsa internet baglantisi hazir demektir.
+   Gelmiyorsa ag ayarlarinizi kontrol edin:
+
+   ip addr show
+   ip route
+   cat /etc/resolv.conf
+
+
+-- ADIM 4: SELinux durumunu kontrol edin --
+
+   getenforce
+
+   "Enforcing" veya "Permissive" goruyorsaniz:
+   (GMS kurulum scripti bunu otomatik kapatacaktir,
+    manuel kapatmak isterseniz:)
+
+   setenforce 0
+   sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
+
+
+-- ADIM 5: Sistem saatini kontrol edin --
+
+   timedatectl status
+
+   Saat yanlis ise:
+   timedatectl set-timezone Europe/Istanbul
+   timedatectl set-ntp true
+
+
+----------------------------------------------------------------
+BOLUM 4: GMS PANEL KURULUMU
+----------------------------------------------------------------
+
+Yukaridaki adimlar tamamlandiktan sonra PuTTY ile
+sunucunuza baglanin ve asagidaki komutu calistirin:
+
+   wget https://raw.githubusercontent.com/GMS-Panel/gms-panel/main/gms-kur.sh
+   bash gms-kur.sh
+
+Script otomatik olarak:
+- Sistemi kontrol eder, eksikleri duzeltir
+- Gerekli bilgileri sorar
+- Nginx, PHP (7.4-8.4), MariaDB 11.4 kurar
+- Panel ve site yapisini olusturur
+- SSL sertifikasi alir (opsiyonel)
+
+
+----------------------------------------------------------------
+BOLUM 5: SIKCA SORULAN SORULAR
+----------------------------------------------------------------
+
+S: PuTTY ile baglanamiyorum, "Access denied" hatasi aliyor.
+C: ADIM 2'deki SSH Root izin komutlarini uygulayın.
+   Sunucuya konsol uzerinden giris yapmaniz gerekebilir.
+
+S: "Network unreachable" hatasi aliyorum.
+C: Ag ayarlarini kontrol edin:
+   nmcli con show
+   nmcli con up <baglanti_adi>
+
+S: Kurulum scripti indirme basarisiz oluyor.
+C: Internet baglantinizi test edin:
+   curl -v https://raw.githubusercontent.com
+   DNS ayarlarinizi kontrol edin:
+   cat /etc/resolv.conf
+
+S: Disk alani yetersiz hatasi aliyor.
+C: Minimum 20 GB disk alani gereklidir.
+   df -h komutu ile disk durumunu kontrol edin.
+
+S: RAM yetersiz hatasi aliyor.
+C: Minimum 1 GB RAM gereklidir.
+   free -h komutu ile RAM durumunu kontrol edin.
+
+
+----------------------------------------------------------------
+DESTEK VE KATKI
+----------------------------------------------------------------
+
+Github  : https://github.com/GMS-Panel/gms-panel
+Sorunlar: https://github.com/GMS-Panel/gms-panel/issues
+
+================================================================
+GMS Panel - Acik Kaynak Hosting Yonetim Paneli
+================================================================
