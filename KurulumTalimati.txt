@@ -139,7 +139,7 @@ BOLUM 4: GMS PANEL KURULUMU
 Yukaridaki adimlar tamamlandiktan sonra PuTTY ile
 sunucunuza baglanin ve asagidaki komutu calistirin:
 
-   wget https://raw.githubusercontent.com/GMS-Panel/gms-panel/main/gms-kur.sh
+   curl -O https://raw.githubusercontent.com/GMS-Panel/gms-panel/main/gms-kur.sh
    bash gms-kur.sh
 
 Script otomatik olarak:

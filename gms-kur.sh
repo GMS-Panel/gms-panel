@@ -40,6 +40,32 @@ logo() {
 }
 
 # =============================================================
+# DNS KALICI AYAR
+# =============================================================
+dns_ayarla() {
+    # Aktif baglanti adini bul
+    AKTIF_CON=$(nmcli -t -f NAME con show --active | head -1)
+
+    if [ -z "$AKTIF_CON" ]; then
+        uyari "Aktif network baglantisi bulunamadi, DNS manuel ayarlaniyor..."
+        echo "nameserver 8.8.8.8" > /etc/resolv.conf
+        echo "nameserver 8.8.4.4" >> /etc/resolv.conf
+        return
+    fi
+
+    # DNS'i NetworkManager uzerinden kalici ayarla
+    nmcli con mod "$AKTIF_CON" ipv4.dns "8.8.8.8 8.8.4.4"
+    nmcli con up "$AKTIF_CON" > /dev/null 2>&1
+
+    # resolv.conf'un ezilmesini engelle
+    echo "nameserver 8.8.8.8" > /etc/resolv.conf
+    echo "nameserver 8.8.4.4" >> /etc/resolv.conf
+    chattr +i /etc/resolv.conf
+
+    tamam "DNS kalici olarak ayarlandi (8.8.8.8 / 8.8.4.4)"
+}
+
+# =============================================================
 # SISTEM KONTROLU
 # =============================================================
 sistem_kontrol() {
@@ -71,6 +97,9 @@ sistem_kontrol() {
         duzelt "Cozum: Bu script sadece Alma Linux 9 icin tasarlanmistir."
         KRITIK_HATA=1
     fi
+
+    # DNS kalici ayarla (Internet testinden once)
+    dns_ayarla
 
     # Internet baglantisi (Duzeltilemeyen)
     if curl -s --connect-timeout 5 https://google.com > /dev/null 2>&1; then
