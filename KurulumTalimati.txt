@@ -42,7 +42,8 @@ BOLUM 2: ALMA LINUX 9 KURULUMU
 
    [Yazilim Secimi - Software Selection]
    - "Minimal Install" secin
-   - Hicbir ek paket secmeyin
+   - Sag tarafta hicbir ek paket secmeyin
+   - "Standard" secenegini de isareletemyin
 
    [Disk Ayarlari - Installation Destination]
    - Diski secin
@@ -51,6 +52,7 @@ BOLUM 2: ALMA LINUX 9 KURULUMU
 
    [Network Ayarlari - Network & Hostname]
    - Ag adaptorunu aktif edin (ON konumuna getirin)
+     DIKKAT: Varsayilan olarak OFF gelir, unutmayin!
    - "Configure" tiklayin
    - IPv4 Settings sekmesine gecin
    - Method: "Manual" secin
@@ -59,12 +61,17 @@ BOLUM 2: ALMA LINUX 9 KURULUMU
      Netmask  : Alt ag maskesi (ornek: 255.255.255.248)
      Gateway  : Ag gecidi
    - DNS Servers: 8.8.8.8,8.8.4.4
+     DIKKAT: Bu alani bos birakmayın, kurulum sonrasi
+             paket indirme islemleri basarisiz olur!
    - Save tiklayin
-   - Hostname: "panel" yazin (veya istediginiz bir isim)
+   - Hostname: istediginiz bir isim yazin (ornek: panel)
 
    [Root Sifresi - Root Password]
    - Guclu bir sifre belirleyin
    - NOT ALIN, unutmayin!
+   - ONEMLI: "Allow root SSH login with password"
+     kutucugunu ISARETLEYIN! Isaretlenmezse PuTTY ile
+     root girisi yapilamaz.
 
    [Kullanici - User Creation]
    - Bu adimi ATLAYIN, GMS Panel kendi kullanicisini olusturur
@@ -87,43 +94,60 @@ Bu islemler icin sunucuya fiziksel veya konsol erisiminiz olmali.
    Sifre         : Kurulumda belirlediginiz sifre
 
 
--- ADIM 2: SSH Root girisi icin izin verin --
+-- ADIM 2: Ag baglantisini test edin --
 
-   Varsayilan olarak Alma Linux 9'da root ile SSH girisine
-   izin verilmez. Asagidaki komutla aktif edin:
+   ping -c 4 8.8.8.8
+
+   Yanit geliyorsa internet baglantisi var demektir.
+   Gelmiyorsa ag ayarlarinizi kontrol edin:
+
+   ip addr show
+   ip route
+
+
+-- ADIM 3: DNS kontrolu yapın (ONEMLI) --
+
+   ping -c 2 google.com
+
+   "Name or service not known" hatasi aliyorsaniz
+   DNS ayari eksik demektir. Asagidaki komutla duzeltın:
+
+   echo "nameserver 8.8.8.8" > /etc/resolv.conf
+   echo "nameserver 8.8.4.4" >> /etc/resolv.conf
+
+   Tekrar test edin:
+   ping -c 2 google.com
+
+   NOT: GMS kurulum scripti DNS'i kalici hale getirecektir.
+        Bu adim sadece scripti indirmek icin gereklidir.
+
+
+-- ADIM 4: PuTTY ile baglanin --
+
+   Artik PuTTY veya SSH ile root olarak baglanabilirsiniz.
+   Kurulum adimlari sirasinda "Allow root SSH login with
+   password" kutucugunu isaretlediyseniz direkt baglanir.
+
+   Isaretlemediyseniz asagidaki komutu konsol uzerinden
+   calistirin, sonra PuTTY ile baglanin:
 
    sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
    echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
    systemctl restart sshd
 
-   Artik PuTTY veya SSH ile root olarak baglanabilirsiniz.
 
-
--- ADIM 3: Ag baglantisini test edin --
-
-   ping -c 4 8.8.8.8
-
-   Yanit geliyorsa internet baglantisi hazir demektir.
-   Gelmiyorsa ag ayarlarinizi kontrol edin:
-
-   ip addr show
-   ip route
-   cat /etc/resolv.conf
-
-
--- ADIM 4: SELinux durumunu kontrol edin --
+-- ADIM 5: SELinux durumunu kontrol edin --
 
    getenforce
 
-   "Enforcing" veya "Permissive" goruyorsaniz:
-   (GMS kurulum scripti bunu otomatik kapatacaktir,
-    manuel kapatmak isterseniz:)
+   NOT: GMS kurulum scripti SELinux'u otomatik kapatacaktir.
+        Manuel kapatmak isterseniz:
 
    setenforce 0
    sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
 
 
--- ADIM 5: Sistem saatini kontrol edin --
+-- ADIM 6: Sistem saatini kontrol edin --
 
    timedatectl status
 
@@ -142,7 +166,10 @@ sunucunuza baglanin ve asagidaki komutu calistirin:
    curl -O https://raw.githubusercontent.com/GMS-Panel/gms-panel/main/gms-kur.sh
    bash gms-kur.sh
 
+NOT: Minimal Install'da wget kurulu gelmez, curl kullanin.
+
 Script otomatik olarak:
+- DNS'i kalici hale getirir
 - Sistemi kontrol eder, eksikleri duzeltir
 - Gerekli bilgileri sorar
 - Nginx, PHP (7.4-8.4), MariaDB 11.4 kurar
@@ -155,19 +182,24 @@ BOLUM 5: SIKCA SORULAN SORULAR
 ----------------------------------------------------------------
 
 S: PuTTY ile baglanamiyorum, "Access denied" hatasi aliyor.
-C: ADIM 2'deki SSH Root izin komutlarini uygulayın.
-   Sunucuya konsol uzerinden giris yapmaniz gerekebilir.
+C: Kurulum sirasinda "Allow root SSH login with password"
+   kutucugunu isaretlemis olmaniz gerekir. Isaretlemediyseniz
+   ADIM 4'teki SSH Root izin komutlarini uygulayın.
 
 S: "Network unreachable" hatasi aliyorum.
 C: Ag ayarlarini kontrol edin:
    nmcli con show
    nmcli con up <baglanti_adi>
 
+S: "Could not resolve host" hatasi aliyorum.
+C: DNS ayari eksik. ADIM 3'u uygulayın:
+   echo "nameserver 8.8.8.8" > /etc/resolv.conf
+   echo "nameserver 8.8.4.4" >> /etc/resolv.conf
+
 S: Kurulum scripti indirme basarisiz oluyor.
-C: Internet baglantinizi test edin:
-   curl -v https://raw.githubusercontent.com
-   DNS ayarlarinizi kontrol edin:
-   cat /etc/resolv.conf
+C: Once DNS testini yapin (ADIM 3). Sonra curl ile indirin:
+   curl -O https://raw.githubusercontent.com/GMS-Panel/gms-panel/main/gms-kur.sh
+   wget Minimal Install'da kurulu gelmez, curl kullanin.
 
 S: Disk alani yetersiz hatasi aliyor.
 C: Minimum 20 GB disk alani gereklidir.
