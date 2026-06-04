@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================
-# GMS Panel - Sunucu Kurulum Scripti v2.0
+# GMS Panel - Sunucu Kurulum Scripti v2.1
 # Alma Linux 9 - Nginx + PHP (7.4-8.4) + MariaDB 11.4
 # Kullanim: bash gms-kur.sh
 # Github: https://github.com/GMS-Panel/gms-panel
@@ -22,7 +22,7 @@ baslik()  { echo -e "\n${MAVI}========================================${SIFIRLA}
 tamam()   { echo -e "  ${YESIL}[OK]${SIFIRLA}  $1"; }
 olumsuz() { echo -e "  ${KIRMIZI}[XX]${SIFIRLA}  $1"; }
 bilgi()   { echo -e "  ${SARI}[!!]${SIFIRLA}  $1"; }
-duzelt()  { echo -e "       ${CYAN}→${SIFIRLA} $1"; }
+duzelt()  { echo -e "       ${CYAN}->${SIFIRLA} $1"; }
 
 logo() {
     clear
@@ -34,7 +34,7 @@ logo() {
     echo " ╚██████╔╝██║ ╚═╝ ██║███████║"
     echo "  ╚═════╝ ╚═╝     ╚═╝╚══════╝"
     echo -e "${SIFIRLA}"
-    echo " GMS Panel Kurulum Scripti v2.0"
+    echo " GMS Panel Kurulum Scripti v2.1"
     echo " https://github.com/GMS-Panel/gms-panel"
     echo ""
 }
@@ -43,8 +43,7 @@ logo() {
 # DNS KALICI AYAR
 # =============================================================
 dns_ayarla() {
-    # Aktif baglanti adini bul
-    AKTIF_CON=$(nmcli -t -f NAME con show --active | head -1)
+    AKTIF_CON=$(nmcli -t -f NAME con show --active 2>/dev/null | head -1)
 
     if [ -z "$AKTIF_CON" ]; then
         uyari "Aktif network baglantisi bulunamadi, DNS manuel ayarlaniyor..."
@@ -53,11 +52,11 @@ dns_ayarla() {
         return
     fi
 
-    # DNS'i NetworkManager uzerinden kalici ayarla
     nmcli con mod "$AKTIF_CON" ipv4.dns "8.8.8.8 8.8.4.4"
     nmcli con up "$AKTIF_CON" > /dev/null 2>&1
 
-    # resolv.conf'un ezilmesini engelle
+    # resolv.conf ezilmesin
+    chattr -i /etc/resolv.conf 2>/dev/null || true
     echo "nameserver 8.8.8.8" > /etc/resolv.conf
     echo "nameserver 8.8.4.4" >> /etc/resolv.conf
     chattr +i /etc/resolv.conf
@@ -75,7 +74,7 @@ sistem_kontrol() {
 
     KRITIK_HATA=0
 
-    # Root kontrolu (Duzeltilemeyen)
+    # Root kontrolu
     if [ "$EUID" -eq 0 ]; then
         tamam "Root kullanici"
     else
@@ -84,7 +83,7 @@ sistem_kontrol() {
         KRITIK_HATA=1
     fi
 
-    # Alma Linux 9 kontrolu (Duzeltilemeyen)
+    # Alma Linux 9 kontrolu
     if grep -q "AlmaLinux 9" /etc/os-release 2>/dev/null; then
         ALMA_VER=$(grep "VERSION_ID" /etc/os-release | cut -d'"' -f2)
         tamam "Alma Linux ${ALMA_VER}"
@@ -101,7 +100,7 @@ sistem_kontrol() {
     # DNS kalici ayarla (Internet testinden once)
     dns_ayarla
 
-    # Internet baglantisi (Duzeltilemeyen)
+    # Internet baglantisi
     if curl -s --connect-timeout 5 https://google.com > /dev/null 2>&1; then
         tamam "Internet baglantisi"
     else
@@ -110,7 +109,7 @@ sistem_kontrol() {
         KRITIK_HATA=1
     fi
 
-    # GitHub erisimi (Duzeltilemeyen)
+    # GitHub erisimi
     if curl -s --connect-timeout 5 https://raw.githubusercontent.com > /dev/null 2>&1; then
         tamam "GitHub erisimi"
     else
@@ -119,7 +118,7 @@ sistem_kontrol() {
         KRITIK_HATA=1
     fi
 
-    # Disk alani - min 10GB (Duzeltilemeyen)
+    # Disk alani
     DISK_GB=$(df / | awk 'NR==2 {print int($4/1024/1024)}')
     DISK_TOPLAM=$(df / | awk 'NR==2 {print int($2/1024/1024)}')
     if [ "$DISK_GB" -ge 10 ]; then
@@ -132,7 +131,7 @@ sistem_kontrol() {
         KRITIK_HATA=1
     fi
 
-    # RAM - min 1GB (Duzeltilemeyen)
+    # RAM
     RAM_MB=$(free -m | awk 'NR==2 {print $2}')
     if [ "$RAM_MB" -ge 2048 ]; then
         tamam "RAM: ${RAM_MB}MB"
@@ -140,11 +139,11 @@ sistem_kontrol() {
         bilgi "RAM: ${RAM_MB}MB - Minimum 2GB onerilir, devam edilebilir."
     else
         olumsuz "RAM: ${RAM_MB}MB - Yetersiz!"
-        duzelt "Cozum: VM ayarlarindan en az 1GB RAM tanimlayın."
+        duzelt "Cozum: VM ayarlarindan en az 1GB RAM tanimlayin."
         KRITIK_HATA=1
     fi
 
-    # SELinux (Otomatik duzeltilir)
+    # SELinux
     SELINUX=$(getenforce 2>/dev/null || echo "Bilinmiyor")
     if [ "$SELINUX" = "Disabled" ]; then
         tamam "SELinux: Devre disi"
@@ -155,14 +154,14 @@ sistem_kontrol() {
         tamam "SELinux: Devre disi birakildi"
     fi
 
-    # Firewall (Otomatik duzeltilir - kurulum ayarlar)
+    # Firewall
     if systemctl is-active firewalld > /dev/null 2>&1; then
         bilgi "Firewall: Aktif - Kurulum portlari ayarlayacak"
     else
         bilgi "Firewall: Devre disi - Kurulum aktif edip ayarlayacak"
     fi
 
-    # Hostname (Otomatik duzeltilir)
+    # Hostname
     MEVCUT_HOSTNAME=$(hostname)
     if [ "$MEVCUT_HOSTNAME" = "localhost" ] || [ "$MEVCUT_HOSTNAME" = "localhost.localdomain" ]; then
         bilgi "Hostname: ${MEVCUT_HOSTNAME} - Kurulumda guncellenecek"
@@ -170,7 +169,7 @@ sistem_kontrol() {
         tamam "Hostname: ${MEVCUT_HOSTNAME}"
     fi
 
-    # Timezone (Otomatik duzeltilir)
+    # Timezone
     TZ=$(timedatectl show --property=Timezone --value 2>/dev/null || echo "Bilinmiyor")
     if [ "$TZ" = "Europe/Istanbul" ]; then
         tamam "Timezone: ${TZ}"
@@ -180,12 +179,11 @@ sistem_kontrol() {
         tamam "Timezone: Europe/Istanbul olarak ayarlandi"
     fi
 
-    # Mevcut servis kontrolu (Bilgi amacli)
+    # Mevcut servis kontrolu
     systemctl is-active nginx > /dev/null 2>&1 && bilgi "Nginx zaten kurulu - Yeniden yapilandirilacak"
     systemctl is-active mariadb > /dev/null 2>&1 && bilgi "MariaDB zaten kurulu - Yeniden yapilandirilacak"
     rpm -q php > /dev/null 2>&1 && bilgi "PHP mevcut - Cakisma olabilir, kontrol edilecek"
 
-    # Sonuc
     echo ""
     echo -e "${CYAN}========================================${SIFIRLA}"
     echo ""
@@ -219,7 +217,6 @@ bilgi_al() {
     echo " Bu bilgiler sisteminizin temel ayarlarini olusturacaktir."
     echo ""
 
-    # Panel yonetici kullanici adi
     while true; do
         read -p " Panel yonetici kullanici adi (ornek: gmspanel): " PANEL_KULLANICI
         if [ -z "$PANEL_KULLANICI" ]; then
@@ -231,43 +228,32 @@ bilgi_al() {
         fi
     done
 
-    # Panel yonetici sifresi
     while true; do
         read -s -p " Panel yonetici sifresi: " PANEL_SIFRE
         echo ""
-        if [ ${#PANEL_SIFRE} -lt 8 ]; then
-            olumsuz "Sifre en az 8 karakter olmalidir!"
-        else
-            break
-        fi
+        [ ${#PANEL_SIFRE} -ge 8 ] && break
+        olumsuz "Sifre en az 8 karakter olmalidir!"
     done
 
-    # Ana domain
     while true; do
         read -p " Ana domain (ornek: firma.com): " ANA_DOMAIN
         [ -n "$ANA_DOMAIN" ] && break
         olumsuz "Domain bos birakilamaz!"
     done
 
-    # Panel domain
     while true; do
         read -p " Panel domain (ornek: panel.firma.com): " PANEL_DOMAIN
         [ -n "$PANEL_DOMAIN" ] && break
         olumsuz "Panel domain bos birakilamaz!"
     done
 
-    # MariaDB sifresi
     while true; do
         read -s -p " MariaDB root sifresi: " DB_ROOT_SIFRE
         echo ""
-        if [ ${#DB_ROOT_SIFRE} -lt 8 ]; then
-            olumsuz "Sifre en az 8 karakter olmalidir!"
-        else
-            break
-        fi
+        [ ${#DB_ROOT_SIFRE} -ge 8 ] && break
+        olumsuz "Sifre en az 8 karakter olmalidir!"
     done
 
-    # SSL
     read -p " SSL sertifikasi alinsin mi? (e/h): " SSL_SECIM
     if [ "$SSL_SECIM" = "e" ] || [ "$SSL_SECIM" = "E" ]; then
         while true; do
@@ -277,10 +263,8 @@ bilgi_al() {
         done
     fi
 
-    # Hostname guncelle
     hostnamectl set-hostname "$PANEL_DOMAIN" 2>/dev/null || true
 
-    # Ozet
     echo ""
     echo -e " ${CYAN}Kurulum ozeti:${SIFIRLA}"
     echo "   Panel Kullanici : ${PANEL_KULLANICI}"
@@ -303,7 +287,7 @@ bilgi_al() {
 # 1 - SISTEM GUNCELLEME
 # =============================================================
 sistem_guncelle() {
-    baslik "1/10 - Sistem Guncelleme"
+    baslik "1/11 - Sistem Guncelleme"
     dnf update -y -q
     dnf install -y -q wget curl vim nano git net-tools bash-completion
     log "Sistem guncellendi."
@@ -313,7 +297,7 @@ sistem_guncelle() {
 # 2 - FIREWALL
 # =============================================================
 firewall_kur() {
-    baslik "2/10 - Firewall"
+    baslik "2/11 - Firewall"
     systemctl enable --now firewalld
     firewall-cmd --permanent --add-service=ssh
     firewall-cmd --permanent --add-service=http
@@ -329,10 +313,30 @@ firewall_kur() {
 }
 
 # =============================================================
-# 3 - NGINX
+# 3 - FAIL2BAN
+# =============================================================
+fail2ban_kur() {
+    baslik "3/11 - Fail2ban"
+    dnf install -y -q fail2ban
+
+    cat > /etc/fail2ban/jail.local << 'EOF'
+[sshd]
+enabled = true
+port = ssh
+maxretry = 5
+findtime = 300
+bantime = 3600
+EOF
+
+    systemctl enable --now fail2ban
+    log "Fail2ban kuruldu ve ayarlandi."
+}
+
+# =============================================================
+# 4 - NGINX
 # =============================================================
 nginx_kur() {
-    baslik "3/10 - Nginx"
+    baslik "4/11 - Nginx"
     dnf install -y -q nginx
     systemctl enable --now nginx
 
@@ -340,6 +344,11 @@ nginx_kur() {
     if ! grep -q "charset utf-8" /etc/nginx/nginx.conf; then
         sed -i 's/keepalive_timeout   65;/keepalive_timeout   65;\n    charset utf-8;/' /etc/nginx/nginx.conf
     fi
+
+    # Varsayilan php-fpm.conf ve php.conf dosyalarini devre disi birak
+    [ -f /etc/nginx/conf.d/php-fpm.conf ] && mv /etc/nginx/conf.d/php-fpm.conf /etc/nginx/conf.d/php-fpm.conf.bak
+    [ -f /etc/nginx/default.d/php.conf ] && mv /etc/nginx/default.d/php.conf /etc/nginx/default.d/php.conf.bak
+    [ -f /etc/nginx/default.d/phpMyAdmin.conf ] && mv /etc/nginx/default.d/phpMyAdmin.conf /etc/nginx/default.d/phpMyAdmin.conf.bak
 
     # IP ile direkt erisimi engelle
     cat > /etc/nginx/conf.d/00-default.conf << 'EOF'
@@ -355,34 +364,40 @@ EOF
 }
 
 # =============================================================
-# 4 - PHP
+# 5 - PHP
 # =============================================================
 php_kur() {
-    baslik "4/10 - PHP (7.4, 8.0, 8.1, 8.2, 8.3, 8.4)"
+    baslik "5/11 - PHP (7.4, 8.0, 8.1, 8.2, 8.3, 8.4)"
     dnf install -y -q https://rpms.remirepo.net/enterprise/remi-release-9.rpm
 
     for VER in 74 80 81 82 83 84; do
-        log "PHP ${VER} kuruluyor..."
-        dnf install -y -q php${VER} php${VER}-php-fpm php${VER}-php-mysqlnd \
+        log "PHP ${VER} kuruluyor... (bu adim uzun surebilir)"
+        dnf install -y php${VER} php${VER}-php-fpm php${VER}-php-mysqlnd \
             php${VER}-php-curl php${VER}-php-gd php${VER}-php-mbstring \
             php${VER}-php-xml php${VER}-php-zip php${VER}-php-json \
             php${VER}-php-opcache php${VER}-php-intl 2>/dev/null || uyari "PHP ${VER} kurulamadi."
 
         CONF="/etc/opt/remi/php${VER}/php-fpm.d/www.conf"
         if [ -f "$CONF" ]; then
-            sed -i 's/listen.acl_users = apache$/listen.acl_users = apache,nginx/' "$CONF"
+            # listen.owner ve listen.group ayarla
+            sed -i 's/^;listen.owner.*/listen.owner = nginx/' "$CONF"
+            sed -i 's/^;listen.group.*/listen.group = nginx/' "$CONF"
+            sed -i 's/^;listen.mode.*/listen.mode = 0660/' "$CONF"
+            # listen.acl_users devre disi birak
+            sed -i 's/^listen.acl_users/#listen.acl_users/' "$CONF"
         fi
         systemctl enable --now php${VER}-php-fpm 2>/dev/null || true
+        tamam "PHP ${VER} kuruldu."
     done
 
     log "Tum PHP versiyonlari kuruldu."
 }
 
 # =============================================================
-# 5 - MARIADB
+# 6 - MARIADB
 # =============================================================
 mariadb_kur() {
-    baslik "5/10 - MariaDB 11.4"
+    baslik "6/11 - MariaDB 11.4"
     curl -LsS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup \
         | bash -s -- --mariadb-server-version="mariadb-11.4" > /dev/null 2>&1
     dnf install -y -q MariaDB-server MariaDB-client
@@ -403,38 +418,33 @@ SQLEOF
 }
 
 # =============================================================
-# 6 - PHPMYADMIN
+# 7 - PHPMYADMIN
 # =============================================================
 phpmyadmin_kur() {
-    baslik "6/10 - phpMyAdmin"
+    baslik "7/11 - phpMyAdmin"
     dnf install -y -q phpmyadmin
     log "phpMyAdmin kuruldu."
 }
 
 # =============================================================
-# 7 - PANEL KULLANICISI VE KLASOR YAPISI
+# 8 - PANEL KULLANICISI VE KLASOR YAPISI
 # =============================================================
 klasor_olustur() {
-    baslik "7/10 - Kullanici ve Klasor Yapisi"
+    baslik "8/11 - Kullanici ve Klasor Yapisi"
 
-    # Panel yonetici kullanicisi olustur
     useradd -d /home/${PANEL_KULLANICI} -m -s /bin/bash ${PANEL_KULLANICI} 2>/dev/null || true
     echo "${PANEL_KULLANICI}:${PANEL_SIFRE}" | chpasswd
-
-    # Panel kullanicisina sudo yetkisi ver
     usermod -aG wheel ${PANEL_KULLANICI}
 
-    # Panel klasor yapisi
-    mkdir -p /home/${PANEL_KULLANICI}/gms-panel     # Panel web arayuzu
-    mkdir -p /home/${PANEL_KULLANICI}/app            # Panel uygulama dosyalari
-    mkdir -p /home/${PANEL_KULLANICI}/logs           # Panel loglari
-    mkdir -p /home/${PANEL_KULLANICI}/config         # Panel ayarlari
+    mkdir -p /home/${PANEL_KULLANICI}/gms-panel
+    mkdir -p /home/${PANEL_KULLANICI}/app
+    mkdir -p /home/${PANEL_KULLANICI}/logs
+    mkdir -p /home/${PANEL_KULLANICI}/config
 
     chown -R ${PANEL_KULLANICI}:${PANEL_KULLANICI} /home/${PANEL_KULLANICI}
     chmod 755 /home/${PANEL_KULLANICI}
     chmod 750 /home/${PANEL_KULLANICI}/config
 
-    # Ana domain kullanicisi ve klasoru
     ANA_DOMAIN_KULLANICI=$(echo "$ANA_DOMAIN" | tr '.' '_')
     useradd -d /home/${ANA_DOMAIN_KULLANICI} -m -s /bin/bash ${ANA_DOMAIN_KULLANICI} 2>/dev/null || true
     mkdir -p /home/${ANA_DOMAIN_KULLANICI}/public_html
@@ -442,7 +452,6 @@ klasor_olustur() {
     chown -R ${ANA_DOMAIN_KULLANICI}:${ANA_DOMAIN_KULLANICI} /home/${ANA_DOMAIN_KULLANICI}
     chmod 755 /home/${ANA_DOMAIN_KULLANICI} /home/${ANA_DOMAIN_KULLANICI}/public_html
 
-    # Sistem ayarlarini kaydet
     cat > /home/${PANEL_KULLANICI}/config/settings.conf << EOF
 # GMS Panel Sistem Ayarlari
 # Olusturma tarihi: $(date '+%d.%m.%Y %H:%M')
@@ -451,7 +460,7 @@ PANEL_KULLANICI=${PANEL_KULLANICI}
 ANA_DOMAIN=${ANA_DOMAIN}
 PANEL_DOMAIN=${PANEL_DOMAIN}
 KURULUM_TARIHI=$(date '+%d.%m.%Y %H:%M')
-GMS_VERSIYON=2.0
+GMS_VERSIYON=2.1
 EOF
 
     chown ${PANEL_KULLANICI}:${PANEL_KULLANICI} /home/${PANEL_KULLANICI}/config/settings.conf
@@ -461,40 +470,138 @@ EOF
 }
 
 # =============================================================
-# 8 - GITHUB DAN DOSYALARI CEK
+# 9 - SCRIPTLER VE SUDOERS
+# =============================================================
+scriptler_kur() {
+    baslik "9/11 - Yardimci Scriptler ve Sudoers"
+
+    # yeni-hesap.sh
+    log "yeni-hesap.sh indiriliyor..."
+    wget -q "${GITHUB_RAW}/scripts/yeni-hesap.sh" -O /usr/local/bin/yeni-hesap.sh
+    chmod +x /usr/local/bin/yeni-hesap.sh
+
+    # hesap-sil.sh
+    log "hesap-sil.sh olusturuluyor..."
+    cat > /usr/local/bin/hesap-sil.sh << 'EOF'
+#!/bin/bash
+KULLANICI=$1
+if [ -z "$KULLANICI" ]; then
+    echo "Kullanim: hesap-sil.sh kullaniciadi"
+    exit 1
+fi
+for VER in 74 80 81 82 83 84; do
+    CONF="/etc/opt/remi/php${VER}/php-fpm.d/${KULLANICI}.conf"
+    if [ -f "$CONF" ]; then
+        rm -f "$CONF"
+        systemctl restart php${VER}-php-fpm 2>/dev/null
+    fi
+done
+find /etc/nginx/conf.d/ -name "*.conf" -exec grep -l "/home/${KULLANICI}/" {} \; | xargs rm -f 2>/dev/null
+nginx -t && systemctl reload nginx 2>/dev/null
+userdel -r "$KULLANICI" 2>/dev/null
+echo "[GMS] $KULLANICI silindi."
+EOF
+    chmod +x /usr/local/bin/hesap-sil.sh
+
+    # domain-ekle.sh
+    log "domain-ekle.sh olusturuluyor..."
+    cat > /usr/local/bin/domain-ekle.sh << 'EOF'
+#!/bin/bash
+DOMAIN=$1
+KULLANICI=$2
+PHP=$3
+WWW=$4
+if [ -z "$DOMAIN" ] || [ -z "$KULLANICI" ] || [ -z "$PHP" ]; then
+    echo "Kullanim: domain-ekle.sh domain kullanici php_ver www(0/1)"
+    exit 1
+fi
+SERVER_NAME="$DOMAIN"
+[ "$WWW" = "1" ] && SERVER_NAME="$DOMAIN www.$DOMAIN"
+cat > /etc/nginx/conf.d/${DOMAIN}.conf << NGINX
+server {
+    listen 80;
+    server_name ${SERVER_NAME};
+    root /home/${KULLANICI}/public_html;
+    index index.php index.html;
+    access_log /home/${KULLANICI}/logs/${DOMAIN}_access.log;
+    error_log /home/${KULLANICI}/logs/${DOMAIN}_error.log;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/opt/remi/php${PHP}/run/php-fpm/${KULLANICI}.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        include fastcgi_params;
+    }
+}
+NGINX
+nginx -t && systemctl reload nginx
+echo "[GMS] $DOMAIN eklendi."
+EOF
+    chmod +x /usr/local/bin/domain-ekle.sh
+
+    # Sudoers
+    log "Sudoers ayarlaniyor..."
+    cat > /etc/sudoers.d/gms-panel << EOF
+apache ALL=(root) NOPASSWD: /usr/local/bin/yeni-hesap.sh
+apache ALL=(root) NOPASSWD: /usr/local/bin/hesap-sil.sh
+apache ALL=(root) NOPASSWD: /usr/local/bin/domain-ekle.sh
+apache ALL=(root) NOPASSWD: /usr/bin/firewall-cmd
+apache ALL=(root) NOPASSWD: /usr/bin/fail2ban-client
+apache ALL=(root) NOPASSWD: /usr/bin/systemctl start fail2ban
+apache ALL=(root) NOPASSWD: /usr/bin/systemctl stop fail2ban
+apache ALL=(root) NOPASSWD: /usr/bin/systemctl enable fail2ban
+apache ALL=(root) NOPASSWD: /usr/bin/certbot
+apache ALL=(root) NOPASSWD: /usr/sbin/userdel
+apache ALL=(root) NOPASSWD: /usr/sbin/nginx
+apache ALL=(root) NOPASSWD: /usr/bin/systemctl restart php74-php-fpm
+apache ALL=(root) NOPASSWD: /usr/bin/systemctl restart php80-php-fpm
+apache ALL=(root) NOPASSWD: /usr/bin/systemctl restart php81-php-fpm
+apache ALL=(root) NOPASSWD: /usr/bin/systemctl restart php82-php-fpm
+apache ALL=(root) NOPASSWD: /usr/bin/systemctl restart php83-php-fpm
+apache ALL=(root) NOPASSWD: /usr/bin/systemctl restart php84-php-fpm
+apache ALL=(root) NOPASSWD: /usr/bin/systemctl reload nginx
+EOF
+    chmod 440 /etc/sudoers.d/gms-panel
+    visudo -c > /dev/null 2>&1 && tamam "Sudoers ayarlandi." || uyari "Sudoers dogrulama hatasi!"
+
+    log "Yardimci scriptler ve sudoers tamamlandi."
+}
+
+# =============================================================
+# 10 - GITHUB DAN PANEL DOSYALARINI CEK
 # =============================================================
 dosyalari_cek() {
-    baslik "8/10 - Dosyalar Indiriliyor"
+    baslik "10/11 - Panel Dosyalari Indiriliyor"
 
-    # Panel web arayuzu
-    log "Panel dosyalari indiriliyor..."
-    wget -q "${GITHUB_RAW}/panel/index.php" \
-        -O /home/${PANEL_KULLANICI}/gms-panel/index.php
-    chown ${PANEL_KULLANICI}:${PANEL_KULLANICI} \
-        /home/${PANEL_KULLANICI}/gms-panel/index.php
+    PANEL_FILES="index.php login.php auth.php layout.php logout.php accounts.php new_account.php edit_account.php domains.php ssl.php firewall.php"
+
+    for FILE in $PANEL_FILES; do
+        log "${FILE} indiriliyor..."
+        wget -q "${GITHUB_RAW}/panel/${FILE}" \
+            -O /home/${PANEL_KULLANICI}/gms-panel/${FILE} || uyari "${FILE} indirilemedi."
+    done
+
+    chown -R ${PANEL_KULLANICI}:${PANEL_KULLANICI} /home/${PANEL_KULLANICI}/gms-panel/
 
     # Ana site
-    log "Ana site dosyasi indiriliyor..."
     ANA_DOMAIN_KULLANICI=$(echo "$ANA_DOMAIN" | tr '.' '_')
     wget -q "${GITHUB_RAW}/site/index.html" \
-        -O /home/${ANA_DOMAIN_KULLANICI}/public_html/index.html
+        -O /home/${ANA_DOMAIN_KULLANICI}/public_html/index.html || uyari "Ana site dosyasi indirilemedi."
     chown ${ANA_DOMAIN_KULLANICI}:${ANA_DOMAIN_KULLANICI} \
         /home/${ANA_DOMAIN_KULLANICI}/public_html/index.html
-
-    # yeni-hesap scripti
-    log "yeni-hesap.sh indiriliyor..."
-    wget -q "${GITHUB_RAW}/scripts/yeni-hesap.sh" \
-        -O /usr/local/bin/yeni-hesap.sh
-    chmod +x /usr/local/bin/yeni-hesap.sh
 
     log "Dosyalar indirildi."
 }
 
 # =============================================================
-# 9 - NGINX VHOST
+# 11 - NGINX VHOST VE SSL
 # =============================================================
-nginx_vhost() {
-    baslik "9/10 - Nginx Vhost"
+nginx_vhost_ssl() {
+    baslik "11/11 - Nginx Vhost ve SSL"
 
     ANA_DOMAIN_KULLANICI=$(echo "$ANA_DOMAIN" | tr '.' '_')
 
@@ -558,24 +665,47 @@ EOF
 
     nginx -t && systemctl reload nginx
     log "Nginx vhost ayarlandi."
-}
 
-# =============================================================
-# 10 - SSL
-# =============================================================
-ssl_kur() {
-    baslik "10/10 - SSL Sertifikasi"
+    # SSL
     if [ "$SSL_SECIM" = "e" ] || [ "$SSL_SECIM" = "E" ]; then
         dnf install -y -q certbot python3-certbot-nginx
         systemctl enable --now certbot-renew.timer
+
+        # Let's Encrypt arsiv izinleri
+        mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+        cat > /etc/letsencrypt/renewal-hooks/deploy/fix-permissions.sh << 'EOF'
+#!/bin/bash
+chmod 755 /etc/letsencrypt/archive/
+chmod -R 755 /etc/letsencrypt/archive/
+EOF
+        chmod +x /etc/letsencrypt/renewal-hooks/deploy/fix-permissions.sh
+
         certbot --nginx -d ${ANA_DOMAIN} --non-interactive --agree-tos \
             -m ${EPOSTA} || uyari "${ANA_DOMAIN} SSL alinamadi. DNS ayarlarini kontrol edin."
         certbot --nginx -d ${PANEL_DOMAIN} --non-interactive --agree-tos \
             -m ${EPOSTA} || uyari "${PANEL_DOMAIN} SSL alinamadi. DNS ayarlarini kontrol edin."
+
+        # Arsiv izinlerini hemen duzenle
+        chmod 755 /etc/letsencrypt/archive/ 2>/dev/null || true
+        chmod -R 755 /etc/letsencrypt/archive/ 2>/dev/null || true
     else
         bilgi "SSL atlandi."
         duzelt "Sonradan almak icin: certbot --nginx -d ${ANA_DOMAIN}"
     fi
+
+    # Panel icin auth.conf olustur
+    log "Panel kimlik dogrulama ayarlaniyor..."
+    mkdir -p /etc/gms
+    PANEL_HASH=$(php83 -r "echo password_hash('${PANEL_SIFRE}', PASSWORD_DEFAULT);" 2>/dev/null)
+    cat > /etc/gms/auth.conf << EOF
+# GMS Panel Auth Yapilandirmasi
+# Olusturma tarihi: $(date '+%d.%m.%Y %H:%M')
+USER=${PANEL_KULLANICI}
+HASH=${PANEL_HASH}
+EOF
+    chmod 644 /etc/gms/auth.conf
+
+    log "Nginx vhost ve SSL tamamlandi."
 }
 
 # =============================================================
@@ -604,8 +734,9 @@ ozet_goster() {
     echo -e " ${CYAN}Kurulu Servisler:${SIFIRLA}"
     echo "   PHP        : 7.4, 8.0, 8.1, 8.2, 8.3, 8.4"
     echo "   MariaDB    : 11.4"
-    echo "   Nginx      : $(nginx -v 2>&1 | cut -d'/' -f2)"
+    echo "   Nginx      : $(/usr/sbin/nginx -v 2>&1 | grep -oP '[\d.]+')"
     echo "   Firewall   : Aktif"
+    echo "   Fail2ban   : Aktif"
     echo ""
     echo -e " ${CYAN}Ayar Dosyasi:${SIFIRLA}"
     echo "   /home/${PANEL_KULLANICI}/config/settings.conf"
@@ -621,12 +752,13 @@ sistem_kontrol
 bilgi_al
 sistem_guncelle
 firewall_kur
+fail2ban_kur
 nginx_kur
 php_kur
 mariadb_kur
 phpmyadmin_kur
 klasor_olustur
+scriptler_kur
 dosyalari_cek
-nginx_vhost
-ssl_kur
+nginx_vhost_ssl
 ozet_goster

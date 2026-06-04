@@ -91,23 +91,8 @@ pm.max_spare_servers = 3
 
     // Hesabi sil
     if ($action === 'delete' && ($_POST['confirm'] ?? '') === $user) {
-        // PHP pool sil
-        $pool_conf = "/etc/opt/remi/php{$mevcut_php}/php-fpm.d/{$user}.conf";
-        if (file_exists($pool_conf)) unlink($pool_conf);
-        shell_exec("systemctl restart php{$mevcut_php}-php-fpm 2>/dev/null");
-
-        // Nginx config sil
-        foreach (glob('/etc/nginx/conf.d/*.conf') as $conf) {
-            $content = file_get_contents($conf);
-            if (strpos($content, "/home/{$user}/") !== false) {
-                unlink($conf);
-                break;
-            }
-        }
-        shell_exec("nginx -t && systemctl reload nginx 2>/dev/null");
-
-        // Linux kullanicisini sil
-        shell_exec("userdel -r " . escapeshellarg($user) . " 2>/dev/null");
+        // Hesap sil scriptini calistir
+        $out = shell_exec("/usr/bin/sudo /usr/local/bin/hesap-sil.sh " . escapeshellarg($user) . " 2>&1");
 
         header('Location: accounts.php?deleted=' . urlencode($user));
         exit;

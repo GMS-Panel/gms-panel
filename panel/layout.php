@@ -10,6 +10,7 @@ function layout_head(string $title = 'GMS Panel', string $active = 'dashboard') 
         'domains'   => ['icon' => 'ti-world',            'label' => 'Domainler',  'href' => 'domains.php'],
         'databases' => ['icon' => 'ti-database',         'label' => 'Veritabanı', 'href' => 'databases.php'],
         'ssl'       => ['icon' => 'ti-lock',             'label' => 'SSL',        'href' => 'ssl.php'],
+        'firewall'  => ['icon' => 'ti-shield',           'label' => 'Firewall',   'href' => 'firewall.php'],
         'backup'    => ['icon' => 'ti-device-floppy',    'label' => 'Yedekleme',  'href' => 'backup.php'],
     ];
 ?>
