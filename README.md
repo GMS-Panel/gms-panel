@@ -6,6 +6,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Alma%20Linux%209-blue.svg)](https://almalinux.org/)
 [![PHP](https://img.shields.io/badge/PHP-7.4%20--%208.4-purple.svg)](https://www.php.net/)
 [![MariaDB](https://img.shields.io/badge/MariaDB-11.4-orange.svg)](https://mariadb.org/)
+[![Version](https://img.shields.io/badge/Version-2.1-green.svg)](https://github.com/GMS-Panel/gms-panel)
 
 ---
 
@@ -19,9 +20,11 @@ cPanel, DirectAdmin gibi ücretli ve domain sınırlı sistemlere alternatif ola
 
 ## Özellikler
 
-### Mevcut (v2.0)
+### Mevcut (v2.1)
 - Tek komutla tam otomatik kurulum
 - Kurulum öncesi sistem kontrolü (kritik hatalar durdurur, düzeltilebilecekler otomatik düzeltilir)
+- DNS kalıcı ayar (NetworkManager üzerinden)
+- Fail2ban SSH brute-force koruması
 - Nginx web sunucu
 - PHP çoklu versiyon desteği (7.4, 8.0, 8.1, 8.2, 8.3, 8.4)
 - Her hesap için izole PHP-FPM pool
@@ -31,16 +34,16 @@ cPanel, DirectAdmin gibi ücretli ve domain sınırlı sistemlere alternatif ola
 - Firewall otomatik yapılandırma
 - Her site için ayrı Linux kullanıcısı ve izolasyon
 - Panel yönetici kullanıcısı (sudo yetkili)
-- Sistem ayarları kayıt dosyası
+- Sudoers otomatik yapılandırma
+- **Panel web arayüzü:**
+  - Giriş sistemi (brute-force korumalı, 5 deneme → 15 dk kilit)
+  - Dashboard (servis durumları, sistem bilgileri, CPU/RAM/disk istatistikleri)
+  - Hesap yönetimi (ekle, sil, PHP versiyonu değiştir)
+  - Domain yönetimi (ekle, sil, SSL ile birlikte)
+  - SSL yönetimi (listele, yenile, sil, yeni al)
+  - Firewall yönetimi (servisler, port yönetimi, IP engelleme, Fail2ban)
 
 ### Geliştirme Aşamasında
-- Panel web arayüzü (PHP tabanlı)
-  - Sistem durum izleme (CPU, RAM, Disk)
-  - Servis durumları (Nginx, PHP, MariaDB, Firewall)
-  - Hesap yönetimi (ekle, sil, düzenle)
-  - Domain yönetimi
-  - SSL yönetimi
-  - phpMyAdmin entegrasyonu
 - Veritabanı yönetimi (panel üzerinden)
 - FTP/SFTP hesap yönetimi
 - E-posta hesap yönetimi
@@ -67,9 +70,11 @@ cPanel, DirectAdmin gibi ücretli ve domain sınırlı sistemlere alternatif ola
 ## Hızlı Kurulum
 
 ```bash
-wget https://raw.githubusercontent.com/GMS-Panel/gms-panel/main/gms-kur.sh
+curl -O https://raw.githubusercontent.com/GMS-Panel/gms-panel/main/gms-kur.sh
 bash gms-kur.sh
 ```
+
+> **Not:** Alma Linux 9 Minimal kurulumda `wget` gelmez, `curl` kullanın.
 
 Detaylı kurulum talimatları için: [KurulumTalimati.txt](KurulumTalimati.txt)
 
@@ -105,35 +110,48 @@ Detaylı kurulum talimatları için: [KurulumTalimati.txt](KurulumTalimati.txt)
 
 ```
 gms-panel/
-├── gms-kur.sh              # Ana kurulum scripti
-├── KurulumTalimati.txt     # Adım adım kurulum rehberi
-├── README.md               # Bu dosya
+├── gms-kur.sh                  # Ana kurulum scripti (v2.1)
+├── KurulumTalimati.txt         # Adım adım kurulum rehberi
+├── README.md                   # Bu dosya
 ├── panel/
-│   └── index.php           # Panel web arayüzü ana sayfası
+│   ├── login.php               # Giriş sayfası
+│   ├── auth.php                # Oturum kontrol helper
+│   ├── layout.php              # Ortak sidebar/header/footer
+│   ├── logout.php              # Çıkış
+│   ├── index.php               # Dashboard
+│   ├── accounts.php            # Hesap listesi
+│   ├── new_account.php         # Yeni hesap oluşturma
+│   ├── edit_account.php        # Hesap düzenleme/silme
+│   ├── domains.php             # Domain yönetimi
+│   ├── ssl.php                 # SSL sertifika yönetimi
+│   └── firewall.php            # Firewall yönetimi
 ├── site/
-│   └── index.html          # Ana site varsayılan sayfası
+│   └── index.html              # Ana site varsayılan sayfası
 └── scripts/
-    └── yeni-hesap.sh       # Yeni hosting hesabı oluşturma scripti
+    └── yeni-hesap.sh           # Yeni hosting hesabı oluşturma scripti
 ```
 
 ---
 
 ## Yol Haritası
 
-### v2.1
-- [ ] Panel giriş sistemi (kullanıcı adı / şifre)
-- [ ] Hesap yönetimi (ekle, sil, listele)
-- [ ] Domain yönetimi
-- [ ] Basit dosya yöneticisi
+### v2.1 ✅ Tamamlandı
+- [x] Panel giriş sistemi (brute-force korumalı)
+- [x] Dashboard (servis durumları, sistem istatistikleri)
+- [x] Hesap yönetimi (ekle, sil, PHP versiyonu değiştir)
+- [x] Domain yönetimi (ekle, sil, SSL ile birlikte)
+- [x] SSL yönetimi panel üzerinden
+- [x] Firewall yönetimi (servisler, portlar, IP engelleme, Fail2ban)
+- [x] Fail2ban kurulumu ve otomatik konfigürasyon
 
 ### v2.5
-- [ ] SSL yönetimi panel üzerinden
 - [ ] Veritabanı yönetimi panel üzerinden
 - [ ] FTP hesap yönetimi
 - [ ] E-posta hesap yönetimi
+- [ ] Dosya yöneticisi
 
 ### v3.0
-- [ ] Yedekleme sistemi
+- [ ] Yedekleme sistemi (UrBackup entegrasyonu)
 - [ ] Çoklu sunucu desteği
 - [ ] API
 - [ ] Müşteri portalı
