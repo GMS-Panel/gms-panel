@@ -481,39 +481,34 @@ scriptler_kur() {
     chmod +x /usr/local/bin/yeni-hesap.sh
 
     # hesap-sil.sh
-    log "hesap-sil.sh olusturuluyor..."
-    cat > /usr/local/bin/hesap-sil.sh << 'EOF'
+    log "hesap-sil.sh indiriliyor..."
+    wget -q "${GITHUB_RAW}/scripts/hesap-sil.sh" -O /usr/local/bin/hesap-sil.sh || {
+        uyari "hesap-sil.sh indirilemedi, inline olusturuluyor..."
+        cat > /usr/local/bin/hesap-sil.sh << 'EOF'
 #!/bin/bash
 KULLANICI=$1
-if [ -z "$KULLANICI" ]; then
-    echo "Kullanim: hesap-sil.sh kullaniciadi"
-    exit 1
-fi
+if [ -z "$KULLANICI" ]; then echo "Kullanim: hesap-sil.sh kullaniciadi"; exit 1; fi
 for VER in 74 80 81 82 83 84; do
     CONF="/etc/opt/remi/php${VER}/php-fpm.d/${KULLANICI}.conf"
-    if [ -f "$CONF" ]; then
-        rm -f "$CONF"
-        systemctl restart php${VER}-php-fpm 2>/dev/null
-    fi
+    if [ -f "$CONF" ]; then rm -f "$CONF"; systemctl restart php${VER}-php-fpm 2>/dev/null; fi
 done
 find /etc/nginx/conf.d/ -name "*.conf" -exec grep -l "/home/${KULLANICI}/" {} \; | xargs rm -f 2>/dev/null
 nginx -t && systemctl reload nginx 2>/dev/null
 userdel -r "$KULLANICI" 2>/dev/null
 echo "[GMS] $KULLANICI silindi."
 EOF
+    }
     chmod +x /usr/local/bin/hesap-sil.sh
 
     # domain-ekle.sh
-    log "domain-ekle.sh olusturuluyor..."
-    cat > /usr/local/bin/domain-ekle.sh << 'EOF'
+    log "domain-ekle.sh indiriliyor..."
+    wget -q "${GITHUB_RAW}/scripts/domain-ekle.sh" -O /usr/local/bin/domain-ekle.sh || {
+        uyari "domain-ekle.sh indirilemedi, inline olusturuluyor..."
+        cat > /usr/local/bin/domain-ekle.sh << 'EOF'
 #!/bin/bash
-DOMAIN=$1
-KULLANICI=$2
-PHP=$3
-WWW=$4
+DOMAIN=$1; KULLANICI=$2; PHP=$3; WWW=$4
 if [ -z "$DOMAIN" ] || [ -z "$KULLANICI" ] || [ -z "$PHP" ]; then
-    echo "Kullanim: domain-ekle.sh domain kullanici php_ver www(0/1)"
-    exit 1
+    echo "Kullanim: domain-ekle.sh domain kullanici php_ver www(0/1)"; exit 1
 fi
 SERVER_NAME="$DOMAIN"
 [ "$WWW" = "1" ] && SERVER_NAME="$DOMAIN www.$DOMAIN"
@@ -525,11 +520,7 @@ server {
     index index.php index.html;
     access_log /home/${KULLANICI}/logs/${DOMAIN}_access.log;
     error_log /home/${KULLANICI}/logs/${DOMAIN}_error.log;
-
-    location / {
-        try_files \$uri \$uri/ /index.php?\$query_string;
-    }
-
+    location / { try_files \$uri \$uri/ /index.php?\$query_string; }
     location ~ \.php$ {
         fastcgi_pass unix:/var/opt/remi/php${PHP}/run/php-fpm/${KULLANICI}.sock;
         fastcgi_index index.php;
@@ -541,6 +532,7 @@ NGINX
 nginx -t && systemctl reload nginx
 echo "[GMS] $DOMAIN eklendi."
 EOF
+    }
     chmod +x /usr/local/bin/domain-ekle.sh
 
     # Sudoers
