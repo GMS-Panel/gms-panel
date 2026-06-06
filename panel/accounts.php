@@ -1,5 +1,6 @@
 <?php
 require_once 'auth.php';
+admin_only();
 require_once 'layout.php';
 
 // /home altındaki hesapları listele (panel kullanıcısı ve sistem kullanıcıları hariç)

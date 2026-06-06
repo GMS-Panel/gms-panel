@@ -83,7 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Yeni domain ekle
     if ($action === 'add_domain') {
         $domain    = strtolower(trim($_POST['domain'] ?? ''));
-        $kullanici = trim($_POST['kullanici'] ?? '');
+        // Alt kullanici sadece kendi hesabina domain ekleyebilir
+        $kullanici = is_user() ? ($_SESSION['gms_hesap'] ?? '') : trim($_POST['kullanici'] ?? '');
         $www       = isset($_POST['www']);
         $ssl       = isset($_POST['ssl']);
         $email     = trim($_POST['email'] ?? '');
@@ -285,6 +286,7 @@ layout_head('Domain Yonetimi', 'domains');
         </label>
       </div>
 
+      <?php if (is_admin()): ?>
       <div style="margin-bottom:16px">
         <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">
           <i class="ti ti-user" style="font-size:13px"></i> Hesap
@@ -299,6 +301,11 @@ layout_head('Domain Yonetimi', 'domains');
           <?php endforeach; ?>
         </select>
       </div>
+      <?php else: ?>
+      <div style="margin-bottom:16px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;color:var(--text2)">
+        <i class="ti ti-user" style="font-size:13px"></i> Hesap: <strong style="color:var(--text)"><?= htmlspecialchars($_SESSION['gms_hesap'] ?? '') ?></strong>
+      </div>
+      <?php endif; ?>
 
       <!-- SSL Secenegi -->
       <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px">

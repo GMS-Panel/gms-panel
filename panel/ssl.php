@@ -44,6 +44,24 @@ function get_certificates(): array {
             'key_path'    => $dir . '/privkey.pem',
         ];
     }
+    // Alt kullanici sadece kendi hesabinin sertifikalarini gorebilir
+    if (is_user()) {
+        $kendi_hesap = $_SESSION['gms_hesap'] ?? '';
+        $filtered = [];
+        foreach ($certs as $c) {
+            // Nginx config'den hangi hesaba ait oldugunu bul
+            foreach (glob('/etc/nginx/conf.d/*.conf') as $conf) {
+                $conf_content = file_get_contents($conf);
+                if (strpos($conf_content, $c['domain']) !== false &&
+                    preg_match('|/home/([^/]+)/|', $conf_content, $hm) &&
+                    $hm[1] === $kendi_hesap) {
+                    $filtered[] = $c;
+                    break;
+                }
+            }
+        }
+        return $filtered;
+    }
     return $certs;
 }
 
@@ -57,6 +75,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email  = trim($_POST['email'] ?? '');
         $www    = isset($_POST['www']) ? true : false;
 
+        // Alt kullanici erisim kontrolu
+        if (is_user()) {
+            $conf_file = "/etc/nginx/conf.d/{$domain}.conf";
+            if (!file_exists($conf_file)) {
+                $error = 'Bu domain icin yetkiniz yok.';
+            } else {
+                preg_match('|/home/([^/]+)/|', file_get_contents($conf_file), $hm);
+                if (!hesap_erisim($hm[1] ?? '')) {
+                    $error = 'Bu domain icin yetkiniz yok.';
+                }
+            }
+            if (!empty($error)) goto new_ssl_end;
+        }
+
+        if (false) { new_ssl_end: }
         if (empty($domain) || empty($email)) {
             $error = 'Domain ve eposta adresi zorunludur.';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -79,6 +112,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'renew') {
         $domain = trim($_POST['domain'] ?? '');
         if (preg_match('/^[a-z0-9.-]+$/', $domain)) {
+            // Alt kullanici erisim kontrolu
+            if (is_user()) {
+                $conf_file = "/etc/nginx/conf.d/{$domain}.conf";
+                preg_match('|/home/([^/]+)/|', file_exists($conf_file) ? file_get_contents($conf_file) : '', $hm);
+                if (!hesap_erisim($hm[1] ?? '')) { $error = 'Yetki yok.'; goto renew_end; }
+            }
             $out = shell_exec("/usr/bin/sudo /usr/bin/certbot renew --cert-name " . escapeshellarg($domain) . " --force-renewal 2>&1");
             if (strpos($out, 'Congratulations') !== false || strpos($out, 'Successfully') !== false) {
                 $success = "{$domain} sertifikasi yenilendi.";
@@ -93,15 +132,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $domain  = trim($_POST['domain'] ?? '');
         $confirm = trim($_POST['confirm'] ?? '');
         if ($domain === $confirm && preg_match('/^[a-z0-9.-]+$/', $domain)) {
-            $out = shell_exec("/usr/bin/sudo /usr/bin/certbot delete --cert-name " . escapeshellarg($domain) . " --non-interactive 2>&1");
-            $success = "{$domain} sertifikasi silindi.";
+            // Alt kullanici erisim kontrolu
+            if (is_user()) {
+                $conf_file = "/etc/nginx/conf.d/{$domain}.conf";
+                preg_match('|/home/([^/]+)/|', file_exists($conf_file) ? file_get_contents($conf_file) : '', $hm);
+                if (!hesap_erisim($hm[1] ?? '')) { $error = 'Yetki yok.'; }
+            }
+            if (empty($error)) {
+                $out = shell_exec("/usr/bin/sudo /usr/bin/certbot delete --cert-name " . escapeshellarg($domain) . " --non-interactive 2>&1");
+                $success = "{$domain} sertifikasi silindi.";
+            }
         } else {
             $error = 'Domain adi eslesmiyor.';
         }
     }
 
-    // Tumunu yenile
-    if ($action === 'renew_all') {
+    // Tumunu yenile (sadece admin)
+    if ($action === 'renew_all' && is_admin()) {
         $out = shell_exec("/usr/bin/sudo /usr/bin/certbot renew 2>&1");
         $success = "Tum sertifikalar yenileme islemi tamamlandi.";
     }
@@ -115,8 +162,13 @@ $sertifikalar_haric = [];
 foreach (glob('/etc/nginx/conf.d/*.conf') as $conf) {
     $basename = basename($conf, '.conf');
     if (in_array($basename, ['00-default', 'php-fpm'])) continue;
-    $content = file_get_contents($conf);
-    if (preg_match('/server_name\s+([^;]+);/', $content, $m)) {
+    $conf_content = file_get_contents($conf);
+    // Alt kullanici sadece kendi hesabinin domainlerini gorebilir
+    if (is_user()) {
+        preg_match('|/home/([^/]+)/|', $conf_content, $hm_check);
+        if (!hesap_erisim($hm_check[1] ?? '')) continue;
+    }
+    if (preg_match('/server_name\s+([^;]+);/', $conf_content, $m)) {
         foreach (array_map('trim', explode(' ', trim($m[1]))) as $sn) {
             if ($sn === '_' || strpos($sn, 'www.') === 0) continue;
             if (!in_array($sn, $ssl_domain_listesi)) {
@@ -180,10 +232,12 @@ layout_head('SSL Yonetimi', 'ssl');
         <div class="card-head-sub">Let's Encrypt sertifikalari</div>
       </div>
     </div>
+    <?php if (is_admin()): ?>
     <form method="POST">
       <input type="hidden" name="action" value="renew_all">
       <button type="submit" class="btn btn-sm"><i class="ti ti-refresh"></i> Tumunu Yenile</button>
     </form>
+    <?php endif; ?>
   </div>
   <div class="card-body" style="padding:0">
     <?php if (empty($sertifikalar)): ?>
