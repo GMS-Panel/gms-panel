@@ -1,49 +1,39 @@
 #!/bin/bash
-# =============================================================
-# GMS Panel - Domain Ekleme Scripti
-# Kullanim: domain-ekle.sh domain kullanici php_ver www(0/1)
-# Ornek: domain-ekle.sh musteri.com ahmet 83 1
-# PHP versiyonlari: 74, 80, 81, 82, 83, 84
-# www parametresi: 1=www de ekle, 0=sadece domain
-# =============================================================
+# GMS Panel - Domain Ekle
+# Kullanim: domain-ekle.sh domain kullanici php_versiyonu
+# Ornek   : domain-ekle.sh musteri.com ahmet 83
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 DOMAIN=$1
 KULLANICI=$2
 PHP=$3
-WWW=$4
 
 if [ -z "$DOMAIN" ] || [ -z "$KULLANICI" ] || [ -z "$PHP" ]; then
-    echo "Kullanim: domain-ekle.sh domain kullanici php_ver www(0/1)"
-    echo "Ornek: domain-ekle.sh musteri.com ahmet 83 1"
+    echo "Kullanim: domain-ekle.sh domain kullanici php_versiyonu"
     exit 1
 fi
 
-# Kullanici var mi kontrol et
-if ! id "$KULLANICI" > /dev/null 2>&1; then
-    echo "[HATA] Kullanici bulunamadi: $KULLANICI"
+# Kullanici var mi
+if ! id "$KULLANICI" &>/dev/null; then
+    echo "HATA: $KULLANICI kullanicisi bulunamadi."
     exit 1
 fi
 
-# PHP versiyonu gecerli mi
-if [ ! -f "/etc/opt/remi/php${PHP}/php-fpm.d/${KULLANICI}.conf" ]; then
-    echo "[UYARI] PHP ${PHP} pool bulunamadi: ${KULLANICI}.conf"
+# Domain zaten tanimli mi
+if [ -f "/etc/nginx/conf.d/${DOMAIN}.conf" ]; then
+    echo "HATA: Bu domain zaten tanimli."
+    exit 1
 fi
 
-# Server name ayarla
-SERVER_NAME="$DOMAIN"
-[ "$WWW" = "1" ] && SERVER_NAME="$DOMAIN www.$DOMAIN"
-
-echo "[GMS] Domain ekleniyor: $DOMAIN -> $KULLANICI (PHP $PHP)"
-
-# Nginx config olustur
 cat > /etc/nginx/conf.d/${DOMAIN}.conf << NGINX
 server {
     listen 80;
-    server_name ${SERVER_NAME};
+    server_name ${DOMAIN} www.${DOMAIN};
     root /home/${KULLANICI}/public_html;
     index index.php index.html;
     access_log /home/${KULLANICI}/logs/${DOMAIN}_access.log;
-    error_log /home/${KULLANICI}/logs/${DOMAIN}_error.log;
+    error_log  /home/${KULLANICI}/logs/${DOMAIN}_error.log;
 
     location / {
         try_files \$uri \$uri/ /index.php?\$query_string;
@@ -55,15 +45,12 @@ server {
         fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
         include fastcgi_params;
     }
+
+    location ~ /\.ht {
+        deny all;
+    }
 }
 NGINX
 
-# Nginx test ve reload
-if nginx -t 2>/dev/null; then
-    systemctl reload nginx
-    echo "[GMS] Tamamlandi: $DOMAIN eklendi."
-else
-    rm -f /etc/nginx/conf.d/${DOMAIN}.conf
-    echo "[HATA] Nginx config hatasi, domain eklenemedi."
-    exit 1
-fi
+/usr/sbin/nginx -t && /usr/bin/systemctl reload nginx
+echo "[GMS] Domain eklendi: $DOMAIN -> /home/$KULLANICI/public_html"
