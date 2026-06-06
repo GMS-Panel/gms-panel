@@ -3,6 +3,8 @@
 # Ornek: yeni-hesap.sh ahmet ahmet.com 83
 # PHP versiyonlari: 74, 80, 81, 82, 83, 84
 
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 KULLANICI=$1
 DOMAIN=$2
 PHP=$3
@@ -15,7 +17,7 @@ fi
 
 echo "[GMS] Hesap olusturuluyor: $KULLANICI / $DOMAIN / PHP $PHP"
 
-useradd -d /home/$KULLANICI -m -s /bin/bash $KULLANICI
+/usr/sbin/useradd -d /home/$KULLANICI -m -s /bin/bash $KULLANICI
 mkdir -p /home/$KULLANICI/public_html /home/$KULLANICI/logs
 chown -R $KULLANICI:$KULLANICI /home/$KULLANICI
 chmod 755 /home/$KULLANICI /home/$KULLANICI/public_html
@@ -34,7 +36,7 @@ pm.min_spare_servers = 1
 pm.max_spare_servers = 3
 POOL
 
-systemctl restart php${PHP}-php-fpm
+/usr/bin/systemctl restart php${PHP}-php-fpm
 
 cat > /etc/nginx/conf.d/${DOMAIN}.conf << NGINX
 server {
@@ -58,7 +60,7 @@ server {
 }
 NGINX
 
-nginx -t && systemctl reload nginx
+/usr/sbin/nginx -t && /usr/bin/systemctl reload nginx
 
 echo "[GMS] Tamamlandi!"
 echo "  Kullanici : $KULLANICI"

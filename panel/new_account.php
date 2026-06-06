@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "'{$kullanici}' kullanicisi zaten mevcut.";
     } else {
         // Scripti calistir
-        $cmd    = escapeshellcmd("/usr/local/bin/yeni-hesap.sh") . " "
+        $cmd    = "/usr/bin/sudo /usr/local/bin/yeni-hesap.sh "
                 . escapeshellarg($kullanici) . " "
                 . escapeshellarg($domain) . " "
                 . escapeshellarg($php)

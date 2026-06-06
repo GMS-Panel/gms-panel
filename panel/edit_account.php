@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Eski pool sil
             $eski_conf = "/etc/opt/remi/php{$mevcut_php}/php-fpm.d/{$user}.conf";
             if (file_exists($eski_conf)) unlink($eski_conf);
-            shell_exec("systemctl restart php{$mevcut_php}-php-fpm 2>/dev/null");
+            shell_exec("/usr/bin/sudo /usr/bin/systemctl restart php{$mevcut_php}-php-fpm 2>/dev/null");
 
             // Yeni pool olustur
             $pool = "[{$user}]
@@ -68,7 +68,7 @@ pm.min_spare_servers = 1
 pm.max_spare_servers = 3
 ";
             file_put_contents("/etc/opt/remi/php{$yeni_php}/php-fpm.d/{$user}.conf", $pool);
-            shell_exec("systemctl restart php{$yeni_php}-php-fpm 2>/dev/null");
+            shell_exec("/usr/bin/sudo /usr/bin/systemctl restart php{$yeni_php}-php-fpm 2>/dev/null");
 
             // Nginx config guncelle
             foreach (glob('/etc/nginx/conf.d/*.conf') as $conf) {
@@ -83,7 +83,7 @@ pm.max_spare_servers = 3
                     break;
                 }
             }
-            shell_exec("nginx -t && systemctl reload nginx 2>/dev/null");
+            shell_exec("/usr/bin/sudo /usr/sbin/nginx -t && /usr/bin/sudo /usr/bin/systemctl reload nginx 2>/dev/null");
 
             $mevcut_php = $yeni_php;
             $success = "PHP versiyonu PHP {$yeni_php} olarak guncellendi.";
