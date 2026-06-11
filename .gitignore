@@ -1,0 +1,10 @@
+# Gelistirme ortami dosyalari - GitHub'a gonderilmez
+CLAUDE.md
+NOTLAR.md
+
+# Log dosyalari
+*.log
+
+# Gecici dosyalar
+*.tmp
+*.bak

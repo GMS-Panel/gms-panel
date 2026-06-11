@@ -1,7 +1,7 @@
 #!/bin/bash
 # GMS Panel - Yeni Hosting Hesabi Olustur
-# Kullanim: yeni-hesap.sh kullaniciadi domain.com php_versiyonu email ssl(0/1)
-# Ornek   : yeni-hesap.sh ahmet ahmet.com 83 ahmet@ahmet.com 1
+# Kullanim: yeni-hesap.sh kullaniciadi domain.com php_versiyonu email ssl(0/1) sifre
+# Ornek   : yeni-hesap.sh ahmet ahmet.com 83 ahmet@ahmet.com 1 Sifre123
 # PHP ver : 74, 80, 81, 82, 83, 84
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -11,6 +11,7 @@ DOMAIN=$2
 PHP=$3
 EMAIL=${4:-""}
 SSL_KUR=${5:-"0"}
+SIFRE=${6:-""}
 
 YASAK="gmssys root nginx apache mysql mariadb ftp mail www admin administrator test nobody daemon bin sys"
 
@@ -53,6 +54,15 @@ echo "[GMS] Hesap olusturuluyor: $KULLANICI / $DOMAIN / PHP $PHP"
 mkdir -p /home/$KULLANICI/public_html /home/$KULLANICI/logs
 chown -R $KULLANICI:$KULLANICI /home/$KULLANICI
 chmod 755 /home/$KULLANICI /home/$KULLANICI/public_html
+
+# Sifre ata: verilmisse kullan, yoksa guvenli rastgele sifre olustur
+if [ -n "$SIFRE" ]; then
+    echo "${KULLANICI}:${SIFRE}" | /usr/sbin/chpasswd
+else
+    SIFRE=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9!@#' | head -c 16)
+    echo "${KULLANICI}:${SIFRE}" | /usr/sbin/chpasswd
+fi
+echo "  Sifre     : $SIFRE"
 
 # Dosya yoneticisi icin gmssys'e ACL yazma izni ver
 setfacl -R -m u:gmssys:rwx /home/$KULLANICI/

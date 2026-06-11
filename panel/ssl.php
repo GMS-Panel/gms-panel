@@ -428,9 +428,15 @@ layout_head('SSL Yonetimi', 'ssl');
           <?php endforeach; ?>
         </select>
         <div style="margin-top:8px">
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
-            <input type="checkbox" name="www" value="1" checked style="accent-color:var(--blue)">
-            www.domain icin de al
+          <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text2);cursor:pointer">
+            <input type="checkbox" name="www" value="1" checked style="accent-color:var(--blue);margin-top:2px">
+            <span>
+              www.domain icin de al
+              <span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">
+                Secili ise DNS'de hem <code style="color:var(--blue)">domain.com</code> hem de <code style="color:var(--blue)">www.domain.com</code> icin A kaydi olmalidir.
+                Sadece <code style="color:var(--blue)">domain.com</code> kaydiniz varsa bu secenegi kaldiriniz.
+              </span>
+            </span>
           </label>
         </div>
       </div>
@@ -445,9 +451,22 @@ layout_head('SSL Yonetimi', 'ssl');
         <div style="font-size:11px;color:var(--text3);margin-top:4px">Sertifika suresi dolmadan uyari emaili gonderilir.</div>
       </div>
 
+      <!-- DNS Bilgi Kutusu -->
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+          <i class="ti ti-info-circle" style="color:var(--blue)"></i> SSL Almadan Once DNS Kontrol Listesi
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:2">
+          <div><i class="ti ti-check" style="color:var(--green)"></i> Domain icin <strong>A kaydı</strong>: <code style="color:var(--blue)"><?= htmlspecialchars($_SERVER['HTTP_HOST'] ?? '') ?></code> &rarr; <code style="color:var(--amber)"><?= trim(shell_exec('hostname -I | cut -d" " -f1')) ?></code></div>
+          <div><i class="ti ti-check" style="color:var(--green)"></i> www icin <strong>A kaydı</strong> (www secili ise): <code style="color:var(--blue)">www.domain.com</code> &rarr; <code style="color:var(--amber)"><?= trim(shell_exec('hostname -I | cut -d" " -f1')) ?></code></div>
+          <div><i class="ti ti-check" style="color:var(--green)"></i> DNS degisiklikleri yayilmasi <strong>1-24 saat</strong> surebilir</div>
+          <div><i class="ti ti-check" style="color:var(--green)"></i> 80 ve 443 portlari firewall'da <strong>acik</strong> olmalidir</div>
+        </div>
+      </div>
+
       <div style="background:var(--amberbg);border:1px solid rgba(245,158,11,.3);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--amber);margin-bottom:16px;display:flex;gap:8px">
         <i class="ti ti-alert-triangle" style="font-size:14px;flex-shrink:0"></i>
-        Domain A kaydi bu sunucunun IP adresine (<?= trim(shell_exec('hostname -I | cut -d" " -f1')) ?>) isaret etmiyorsa SSL alinamaz.
+        A kaydi bu sunucuya (<?= trim(shell_exec('hostname -I | cut -d" " -f1')) ?>) isaret etmiyorsa certbot dogrulama yapamaz ve SSL alinamaz.
       </div>
 
       <button type="submit" class="btn btn-primary"><i class="ti ti-certificate"></i> SSL Al</button>

@@ -12,11 +12,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $domain    = trim($_POST['domain'] ?? '');
     $php       = trim($_POST['php'] ?? '');
     $email     = trim($_POST['email'] ?? '');
+    $sifre     = $_POST['sifre'] ?? '';
     $ssl_kur   = isset($_POST['ssl_kur']) ? '1' : '0';
 
     // Validasyon
     if (empty($kullanici) || empty($domain) || empty($php)) {
         $error = 'Kullanici adi, domain ve PHP versiyonu zorunludur.';
+    } elseif (strlen($sifre) > 0 && strlen($sifre) < 8) {
+        $error = 'Sifre en az 8 karakter olmalidir.';
     } elseif (!preg_match('/^[a-z0-9_]{3,32}$/', $kullanici)) {
         $error = 'Kullanici adi: sadece kucuk harf, rakam ve alt cizgi (3-32 karakter).';
     } elseif (!preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/', $domain)) {
@@ -26,13 +29,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (is_dir('/home/' . $kullanici)) {
         $error = "'{$kullanici}' kullanicisi zaten mevcut.";
     } else {
-        // Hesap olustur: kullanici domain php email ssl
+        // Hesap olustur: kullanici domain php email ssl sifre
         $cmd    = "/usr/bin/sudo /usr/local/bin/yeni-hesap.sh "
                 . escapeshellarg($kullanici) . " "
                 . escapeshellarg($domain) . " "
                 . escapeshellarg($php) . " "
                 . escapeshellarg($email) . " "
-                . escapeshellarg($ssl_kur)
+                . escapeshellarg($ssl_kur) . " "
+                . escapeshellarg($sifre)
                 . " 2>&1";
         $output = shell_exec($cmd);
 
@@ -128,6 +132,16 @@ layout_head('Yeni Hesap', 'accounts');
           value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
           style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;padding:10px 12px;outline:none">
         <div style="font-size:11px;color:var(--text3);margin-top:4px">Iletisim ve SSL sertifikasi icin kullanilir.</div>
+      </div>
+
+      <!-- Sifre -->
+      <div style="margin-bottom:18px">
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">
+          <i class="ti ti-lock" style="font-size:13px"></i> Sifre
+        </label>
+        <input type="password" name="sifre" placeholder="En az 8 karakter (bos birakılırsa otomatik olusturulur)"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;padding:10px 12px;outline:none">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">FTP / SSH girislerinde kullanilir. Bos birakilirsa guvenli rastgele sifre olusturulur.</div>
       </div>
 
       <!-- Domain -->

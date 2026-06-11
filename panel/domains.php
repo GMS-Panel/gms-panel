@@ -273,6 +273,19 @@ layout_head('Domain Yonetimi', 'domains');
     <form method="POST" style="max-width:500px" id="domain-form">
       <input type="hidden" name="action" value="add_domain">
 
+      <!-- DNS Bilgi Kutusu -->
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+          <i class="ti ti-info-circle" style="color:var(--blue)"></i> Domain Eklemeden Once
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:2">
+          <div><i class="ti ti-point" style="color:var(--blue)"></i> Domain'in DNS panelinde <strong>A kaydı</strong> olusturun: <code style="color:var(--amber)"><?= $server_ip ?></code></div>
+          <div><i class="ti ti-point" style="color:var(--blue)"></i> www icin de ayri <strong>A kaydı</strong> ekleyin: <code style="color:var(--amber)"><?= $server_ip ?></code> (veya CNAME &rarr; domain.com)</div>
+          <div><i class="ti ti-point" style="color:var(--blue)"></i> NS kayitlari bu sunucuya degil, <strong>domain kayit sirketinizin</strong> DNS sunucusuna isaret etmelidir</div>
+          <div><i class="ti ti-point" style="color:var(--blue)"></i> DNS degisiklikleri yayilmasi <strong>1-24 saat</strong> surebilir</div>
+        </div>
+      </div>
+
       <div style="margin-bottom:16px">
         <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">
           <i class="ti ti-world" style="font-size:13px"></i> Domain
@@ -280,9 +293,12 @@ layout_head('Domain Yonetimi', 'domains');
         <input type="text" name="domain" id="domain-input" placeholder="ornek: musteri.com"
           value="<?= htmlspecialchars($_POST['domain'] ?? '') ?>" required
           style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;padding:10px 12px;outline:none">
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;margin-top:8px">
-          <input type="checkbox" name="www" value="1" checked style="accent-color:var(--blue)">
-          www.domain icin de ekle
+        <label style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;margin-top:8px">
+          <input type="checkbox" name="www" value="1" checked style="accent-color:var(--blue);margin-top:2px">
+          <span>
+            www.domain icin de ekle
+            <span style="display:block;font-size:11px;color:var(--text3)">DNS'de www A kaydı yoksa bu secenegi kaldirin</span>
+          </span>
         </label>
       </div>
 
@@ -314,9 +330,13 @@ layout_head('Domain Yonetimi', 'domains');
           <i class="ti ti-lock" style="color:var(--green)"></i> SSL sertifikasi da al (Let's Encrypt)
         </label>
         <div id="ssl-fields" style="display:none;margin-top:12px">
-          <div style="background:var(--amberbg);border:1px solid rgba(245,158,11,.3);border-radius:var(--radius);padding:8px 12px;font-size:12px;color:var(--amber);margin-bottom:12px;display:flex;gap:8px">
-            <i class="ti ti-alert-triangle" style="font-size:13px;flex-shrink:0"></i>
-            Domain A kaydi <?= $server_ip ?> adresine isaret etmiyorsa SSL alinamaz.
+          <div style="background:var(--amberbg);border:1px solid rgba(245,158,11,.3);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--amber);margin-bottom:12px">
+            <div style="display:flex;gap:8px;margin-bottom:6px"><i class="ti ti-alert-triangle" style="font-size:13px;flex-shrink:0"></i> <strong>SSL almadan once:</strong></div>
+            <div style="line-height:1.9;padding-left:4px">
+              &bull; A kaydi <code><?= $server_ip ?></code> adresine isaret etmeli<br>
+              &bull; www seciliyse www icin de A kaydi olmali<br>
+              &bull; 80 ve 443 portlari acik olmali
+            </div>
           </div>
           <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">Eposta Adresi</label>
           <input type="email" name="email" placeholder="admin@domain.com"
