@@ -15,8 +15,10 @@ function layout_head(string $title = 'GMS Panel', string $active = 'dashboard') 
         'domains'   => ['icon'=>'ti-world',            'label'=>'Domainler',   'href'=>'domains.php'],
         'databases' => ['icon'=>'ti-database',         'label'=>'Veritabani',  'href'=>'databases.php'],
         'ssl'       => ['icon'=>'ti-lock',             'label'=>'SSL',         'href'=>'ssl.php'],
-        'backup'    => ['icon'=>'ti-device-floppy',    'label'=>'Yedekleme',   'href'=>'backup.php'],
-        'firewall'  => ['icon'=>'ti-shield',           'label'=>'Firewall',    'href'=>'firewall.php'],
+        'backup'       => ['icon'=>'ti-device-floppy', 'label'=>'Yedekleme',   'href'=>'backup.php'],
+        'firewall'     => ['icon'=>'ti-shield',        'label'=>'Firewall',    'href'=>'firewall.php'],
+        'php_settings' => ['icon'=>'ti-brand-php',     'label'=>'PHP Ayarlari','href'=>'php_settings.php'],
+        'files'        => ['icon'=>'ti-folder',         'label'=>'Dosyalar',    'href'=>'files.php'],
     ];
 
     // Alt kullanici menusu

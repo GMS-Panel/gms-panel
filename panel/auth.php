@@ -61,13 +61,14 @@ function get_user_info(string $username): array {
     return $info;
 }
 
-// Tum alt kullanicilari listele
+// Tum alt kullanicilari listele (panel kullanicilari, hosting hesap configleri haric)
 function get_all_users(): array {
     $users = [];
     foreach (glob('/etc/gms/users/*.conf') as $file) {
         $username = basename($file, '.conf');
         $info = get_user_info($username);
-        if (!empty($info)) {
+        // Sadece panel kullanicisi olan kayitlari don (ROLE alani olmayanlari atla)
+        if (!empty($info) && isset($info['ROLE'])) {
             $info['username'] = $username;
             $users[] = $info;
         }

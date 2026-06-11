@@ -16,7 +16,9 @@ if (file_exists($settings_file)) {
     }
 }
 
-$skip_users = [$panel_user, $settings['ANA_DOMAIN_KULLANICI'] ?? '', 'nobody'];
+// gmssys sistem kullanicisi ve diger sistem kullanicilari gizlenir
+$sistem_kullanicilari = ['gmssys', 'nobody', 'root', 'nginx', 'apache', 'mysql', 'mariadb'];
+$skip_users = array_merge([$panel_user, $settings['ANA_DOMAIN_KULLANICI'] ?? ''], $sistem_kullanicilari);
 
 $hesaplar = [];
 foreach (glob('/home/*', GLOB_ONLYDIR) as $dir) {

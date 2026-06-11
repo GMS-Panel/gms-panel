@@ -7,6 +7,12 @@ function servis_kontrol(string $servis): bool {
     return trim($sonuc) === 'active';
 }
 
+// Servisin kurulu olup olmadigini kontrol et (unit dosyasi var mi?)
+function servis_kurulu(string $servis): bool {
+    return file_exists("/usr/lib/systemd/system/{$servis}.service")
+        || file_exists("/etc/systemd/system/{$servis}.service");
+}
+
 $servisler = [
     'Nginx'    => 'nginx',
     'MariaDB'  => 'mariadb',
@@ -102,7 +108,9 @@ layout_head('Dashboard', 'dashboard');
       <?php foreach ($servisler as $isim => $servis): ?>
       <div class="servis-kart">
         <div class="servis-name"><?= $isim ?></div>
-        <?php if (servis_kontrol($servis)): ?>
+        <?php if (!servis_kurulu($servis)): ?>
+          <div class="servis-pasif" style="color:var(--text3)"><i class="ti ti-minus" style="font-size:15px"></i> Kurulu Degil</div>
+        <?php elseif (servis_kontrol($servis)): ?>
           <div class="servis-aktif"><i class="ti ti-circle-check" style="font-size:15px"></i> Calisiyor</div>
         <?php else: ?>
           <div class="servis-pasif"><i class="ti ti-circle-x" style="font-size:15px"></i> Durdu</div>

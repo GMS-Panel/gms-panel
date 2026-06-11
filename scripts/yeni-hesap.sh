@@ -52,6 +52,10 @@ mkdir -p /home/$KULLANICI/public_html /home/$KULLANICI/logs
 chown -R $KULLANICI:$KULLANICI /home/$KULLANICI
 chmod 755 /home/$KULLANICI /home/$KULLANICI/public_html
 
+# Dosya yoneticisi icin gmssys'e ACL yazma izni ver
+setfacl -R -m u:gmssys:rwx /home/$KULLANICI/
+setfacl -R -d -m u:gmssys:rwx /home/$KULLANICI/
+
 # PHP-FPM pool
 cat > /etc/opt/remi/php${PHP}/php-fpm.d/${KULLANICI}.conf << POOL
 [${KULLANICI}]
@@ -68,6 +72,10 @@ pm.min_spare_servers = 1
 pm.max_spare_servers = 3
 pm.max_requests = 500
 POOL
+
+# Pool conf izinleri: gmssys okuyabilsin (php_settings.php icin)
+chown root:gmssys /etc/opt/remi/php${PHP}/php-fpm.d/${KULLANICI}.conf
+chmod 640 /etc/opt/remi/php${PHP}/php-fpm.d/${KULLANICI}.conf
 
 /usr/bin/systemctl restart php${PHP}-php-fpm
 

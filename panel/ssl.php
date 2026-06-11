@@ -113,16 +113,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $domain = trim($_POST['domain'] ?? '');
         if (preg_match('/^[a-z0-9.-]+$/', $domain)) {
             // Alt kullanici erisim kontrolu
+            $yetki_ok = true;
             if (is_user()) {
                 $conf_file = "/etc/nginx/conf.d/{$domain}.conf";
                 preg_match('|/home/([^/]+)/|', file_exists($conf_file) ? file_get_contents($conf_file) : '', $hm);
-                if (!hesap_erisim($hm[1] ?? '')) { $error = 'Yetki yok.'; goto renew_end; }
+                if (!hesap_erisim($hm[1] ?? '')) { $error = 'Yetki yok.'; $yetki_ok = false; }
             }
-            $out = shell_exec("/usr/bin/sudo /usr/bin/certbot renew --cert-name " . escapeshellarg($domain) . " --force-renewal 2>&1");
-            if (strpos($out, 'Congratulations') !== false || strpos($out, 'Successfully') !== false) {
-                $success = "{$domain} sertifikasi yenilendi.";
-            } else {
-                $error = "Yenileme basarisiz:<br><pre style='margin-top:8px;font-size:11px'>" . htmlspecialchars($out) . "</pre>";
+            if ($yetki_ok) {
+                $out = shell_exec("/usr/bin/sudo /usr/bin/certbot renew --cert-name " . escapeshellarg($domain) . " --force-renewal 2>&1");
+                if (strpos($out, 'Congratulations') !== false || strpos($out, 'Successfully') !== false) {
+                    $success = "{$domain} sertifikasi yenilendi.";
+                } else {
+                    $error = "Yenileme basarisiz:<br><pre style='margin-top:8px;font-size:11px'>" . htmlspecialchars($out) . "</pre>";
+                }
             }
         }
     }

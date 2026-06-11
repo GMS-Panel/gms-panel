@@ -1,7 +1,7 @@
 ================================================================
 GMS PANEL - KURULUM TALIMATI
 ================================================================
-Versiyon : 2.0
+Versiyon : 2.5
 Github   : https://github.com/GMS-Panel/gms-panel
 ================================================================
 
@@ -34,9 +34,12 @@ BOLUM 2: ALMA LINUX 9 KURULUMU
 3. Kurulum ekraninda asagidaki ayarlari yapin:
 
    [Dil Secimi]
-   - Istediginiz dili secin (Turkce desteklenmeyebilir)
-   - English (United States) onerilir
+   - English (United States) Seçin. - Zorunlu
 
+   [Klavye seçimi]
+   -Turkish Seçin  - Önce Ok işareti ile Listenin en üstüne taşıyın.
+   -Yan tarafta test yerinde öçşğ harfleriyle test edin.
+   
    [Zaman Dilimi - Time & Date]
    - Europe/Istanbul secin
 
@@ -171,10 +174,13 @@ NOT: Minimal Install'da wget kurulu gelmez, curl kullanin.
 Script otomatik olarak:
 - DNS'i kalici hale getirir
 - Sistemi kontrol eder, eksikleri duzeltir
-- Gerekli bilgileri sorar
+- Gerekli bilgileri sorar (panel kullanici/sifre, MariaDB sifresi)
 - Nginx, PHP (7.4-8.4), MariaDB 11.4 kurar
-- Panel ve site yapisini olusturur
-- SSL sertifikasi alir (opsiyonel)
+- phpMyAdmin'i panel uzerinden otomatik giris icin ayarlar
+- Panel ve hosting yapisini olusturur
+
+Kurulum tamamlandiginda panel asagidaki adresten erisebilir:
+   http://SUNUCU_IP:8090
 
 
 ----------------------------------------------------------------

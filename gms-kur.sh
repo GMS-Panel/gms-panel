@@ -438,6 +438,12 @@ gmssys_olustur() {
     mkdir -p /home/${GMS_SYS_USER}/gms-panel
     mkdir -p /home/${GMS_SYS_USER}/logs
     chown -R ${GMS_SYS_USER}:${GMS_SYS_USER} /home/${GMS_SYS_USER}
+    # phpMyAdmin config dosyasini okuyabilmesi icin apache grubuna ekle (SSO icin zorunlu)
+    usermod -a -G apache ${GMS_SYS_USER}
+    # Yedekleme dizini
+    mkdir -p /var/gms/backups
+    chown ${GMS_SYS_USER}:${GMS_SYS_USER} /var/gms/backups
+    chmod 750 /var/gms/backups
     tamam "${GMS_SYS_USER} kullanicisi olusturuldu."
 
     # Panel PHP-FPM pool (gmssys olarak calisir - sudo icin kritik)
@@ -703,24 +709,25 @@ SCRIPT
     chmod +x /usr/local/bin/domain-sil.sh
     tamam "domain-sil.sh olusturuldu."
 
-    # --- Panel dosyalari ---
+    # --- Panel dosyalari (GitHub tarball) ---
     log "Panel dosyalari indiriliyor..."
-    if git clone "${GITHUB_REPO}" "${PANEL_DIR}" 2>/dev/null; then
-        tamam "Panel dosyalari indirildi (git clone)."
+    TARBALL_URL="https://github.com/GMS-Panel/gms-panel/archive/refs/heads/main.tar.gz"
+    TMP_TAR="/tmp/gms-panel.tar.gz"
+
+    if curl -fsSL "${TARBALL_URL}" -o "${TMP_TAR}"; then
+        mkdir -p "${PANEL_DIR}"
+        # Tarball icerigini gecici dizine acar, sonra dogru yere tasir
+        tar -xzf "${TMP_TAR}" -C /tmp/
+        # GitHub main branch'i gms-panel-main/ olarak acar
+        cp -rf /tmp/gms-panel-main/. "${PANEL_DIR}/"
+        rm -rf /tmp/gms-panel-main "${TMP_TAR}"
+        tamam "Panel dosyalari indirildi."
     else
-        uyari "git clone basarisiz, dosyalar tek tek indiriliyor..."
-        mkdir -p "${PANEL_DIR}/panel"
-        for FILE in index.php login.php auth.php layout.php logout.php \
-                    accounts.php new_account.php edit_account.php \
-                    domains.php ssl.php firewall.php users.php; do
-            wget -q "${GITHUB_RAW}/panel/${FILE}" \
-                -O "${PANEL_DIR}/panel/${FILE}" || uyari "${FILE} indirilemedi."
-        done
+        hata "Panel dosyalari indirilemedi. Internet baglantisini kontrol edin."
+        exit 1
     fi
 
     chown -R ${GMS_SYS_USER}:${GMS_SYS_USER} "${PANEL_DIR}"
-    git -C "${PANEL_DIR}" config user.email "gms@gms.tr" 2>/dev/null || true
-    git -C "${PANEL_DIR}" config user.name "GMS Panel" 2>/dev/null || true
 
     # phpMyAdmin signon dosyasi (panel web root'unda olmali)
     cat > "${PANEL_DIR}/panel/pma-giris.php" << 'PHPEOF'
@@ -868,7 +875,7 @@ ozet_goster() {
     echo "   Fail2ban : Aktif"
     echo ""
     echo -e " ${CYAN}Panel Guncelleme (deploy):${SIFIRLA}"
-    echo "   cd /home/${GMS_SYS_USER}/gms-panel && git pull"
+    echo "   curl -fsSL https://github.com/GMS-Panel/gms-panel/archive/refs/heads/main.tar.gz | tar -xz -C /tmp/ && cp -rf /tmp/gms-panel-main/. /home/${GMS_SYS_USER}/gms-panel/ && rm -rf /tmp/gms-panel-main"
     echo ""
     echo -e " ${SARI}[!!] Panel sifrenizi guvenli bir yere kaydedin!${SIFIRLA}"
     echo ""

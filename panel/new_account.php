@@ -32,7 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $output = shell_exec($cmd);
 
         if (is_dir('/home/' . $kullanici)) {
-            $success = "Hesap basariyla olusturuldu: <strong>{$kullanici}</strong> / {$domain} / PHP {$php}";
+            // PHP versiyon formatla: "83" -> "8.3"
+            $php_fmt = substr($php, 0, 1) . '.' . substr($php, 1);
+            $success = "Hesap basariyla olusturuldu: <strong>{$kullanici}</strong> / {$domain} / PHP {$php_fmt}";
         } else {
             $error = "Hesap olusturulamadi. Cikti:<br><pre style='margin-top:8px;font-size:11px'>"
                    . htmlspecialchars($output) . "</pre>";

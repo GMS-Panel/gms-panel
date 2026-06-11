@@ -41,8 +41,7 @@ GMS Panel; Nginx, PHP (7.4-8.4) ve MariaDB 11.4 uzerine kurulu, Alma Linux 9 Min
 Alma Linux 9 Minimal kurulu sunucuda root olarak:
 
 ```bash
-git clone https://github.com/GMS-Panel/gms-panel.git
-cd gms-panel
+curl -fsSL https://raw.githubusercontent.com/GMS-Panel/gms-panel/main/gms-kur.sh -o gms-kur.sh
 bash gms-kur.sh
 ```
 
@@ -58,8 +57,11 @@ Kurulum tamamlandiginda panel `http://SUNUCU_IP:8090` adresinden erisebilir.
 ## Panel Guncelleme (Deploy)
 
 ```bash
-cd /home/gmssys/gms-panel
-git pull
+curl -fsSL https://github.com/GMS-Panel/gms-panel/archive/refs/heads/main.tar.gz -o /tmp/gms-panel.tar.gz
+tar -xzf /tmp/gms-panel.tar.gz -C /tmp/
+cp -rf /tmp/gms-panel-main/. /home/gmssys/gms-panel/
+rm -rf /tmp/gms-panel-main /tmp/gms-panel.tar.gz
+systemctl reload php83-php-fpm
 ```
 
 ---
