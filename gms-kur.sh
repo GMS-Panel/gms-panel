@@ -391,10 +391,26 @@ SQLEOF
 }
 
 # =============================================================
-# 7 - PHPMYADMIN
+# 7 - CERTBOT (Let's Encrypt)
+# =============================================================
+certbot_kur() {
+    baslik "7/9 - Certbot (Let's Encrypt)"
+
+    # EPEL kurulu degilse kur (certbot icin gerekli)
+    if ! rpm -q epel-release &>/dev/null; then
+        log "EPEL deposu ekleniyor..."
+        dnf install -y -q epel-release
+    fi
+
+    dnf install -y -q certbot python3-certbot-nginx
+    tamam "Certbot kuruldu: $(certbot --version 2>&1)"
+}
+
+# =============================================================
+# 8 - PHPMYADMIN
 # =============================================================
 phpmyadmin_kur() {
-    baslik "7/9 - phpMyAdmin"
+    baslik "8/9 - phpMyAdmin"
     dnf install -y -q phpmyadmin
 
     PMA_SECRET=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 32)
@@ -504,6 +520,7 @@ EOF
 # =============================================================
 # 9 - PANEL KURULUMU (Dosyalar, Scriptler, Nginx, Auth)
 # =============================================================
+# NOT: panel_kur() fonksiyonu 9. adim olarak tanimlanmistir
 panel_kur() {
     baslik "9/9 - Panel Kurulumu"
 
@@ -892,6 +909,7 @@ fail2ban_kur
 nginx_kur
 php_kur
 mariadb_kur
+certbot_kur
 phpmyadmin_kur
 gmssys_olustur
 panel_kur
