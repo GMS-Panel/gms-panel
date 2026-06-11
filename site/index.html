@@ -1,27 +1,202 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GMS Panel</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, sans-serif; background: #1a1a2e; color: #eee; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .kutu { text-align: center; padding: 50px; background: #16213e; border-radius: 10px; border: 1px solid #0f3460; max-width: 500px; }
-        h1 { color: #e94560; font-size: 2em; margin-bottom: 10px; }
-        p { color: #aaa; margin: 10px 0; line-height: 1.6; }
-        .btn { display: inline-block; margin-top: 20px; padding: 12px 30px; background: #e94560; color: #fff; border-radius: 5px; text-decoration: none; font-weight: bold; }
-        .btn:hover { background: #c73652; }
-        .versiyon { margin-top: 20px; font-size: 11px; color: #555; }
-    </style>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GMS Panel</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0f1117;
+    color: #e2e8f0;
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, #2a3348 1px, transparent 1px);
+    background-size: 32px 32px;
+    opacity: .4;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    max-width: 620px;
+    width: 100%;
+  }
+
+  .site-logo {
+    max-width: 200px;
+    width: 100%;
+    margin: 0 auto 32px;
+    display: block;
+  }
+
+  h1 {
+    font-size: clamp(26px, 5vw, 40px);
+    font-weight: 800;
+    letter-spacing: -.5px;
+    margin-bottom: 36px;
+    color: #e2e8f0;
+  }
+
+  .divider {
+    width: 52px;
+    height: 3px;
+    background: #3b82f6;
+    border-radius: 2px;
+    margin: 0 auto 36px;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .card {
+    background: #161b27;
+    border: 1px solid #2a3348;
+    border-radius: 12px;
+    padding: 18px 14px;
+  }
+
+  .card-logo {
+    width: 52px;
+    height: 52px;
+    object-fit: contain;
+    margin: 0 auto 10px;
+    display: block;
+  }
+
+  .card-icon { font-size: 28px; margin-bottom: 9px; }
+
+  .card-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin-bottom: 4px;
+  }
+  .card-val { font-size: 13px; color: #e2e8f0; font-weight: 600; }
+
+  .powered {
+    background: #161b27;
+    border: 1px solid #2a3348;
+    border-radius: 12px;
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    margin-bottom: 28px;
+  }
+
+  .powered-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #64748b;
+  }
+
+  .powered-row strong { color: #e2e8f0; font-size: 13px; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .b-blue   { background: rgba(59,130,246,.15);  color: #3b82f6; border: 1px solid rgba(59,130,246,.3); }
+  .b-purple { background: rgba(168,85,247,.15);  color: #a855f7; border: 1px solid rgba(168,85,247,.3); }
+  .b-green  { background: rgba(34,197,94,.1);    color: #22c55e; border: 1px solid rgba(34,197,94,.25); }
+  .b-teal   { background: rgba(20,184,166,.1);   color: #14b8a6; border: 1px solid rgba(20,184,166,.25); }
+
+  .b-blue:hover, .b-purple:hover, .b-green:hover, .b-teal:hover { opacity: .8; }
+
+  footer {
+    font-size: 12px;
+    color: #334155;
+    line-height: 1.8;
+  }
+
+  footer a { color: #475569; text-decoration: none; }
+  footer a:hover { color: #3b82f6; }
+</style>
 </head>
 <body>
-    <div class="kutu">
-        <h1>GMS Panel</h1>
-        <p>Bu sunucu <strong>GMS Panel</strong> ile yapilandirilmistir.</p>
-        <p>Guvenli, hizli ve yonetimi kolay hosting altyapisi.</p>
-        <a href="https://panel.gms.tr" class="btn">Yonetim Paneli</a>
-        <p class="versiyon">GMS Panel v1.0 | Alma Linux 9</p>
+
+<div class="container">
+
+  <img src="logo.png" alt="GMS Yazılım Danışmanlık" class="site-logo">
+
+  <h1>GMS Panel</h1>
+
+  <div class="divider"></div>
+
+  <div class="cards">
+    <div class="card">
+      <img src="logo.png" alt="GMS Panel" class="card-logo">
+      <div class="card-title">Altyapı</div>
+      <div class="card-val">GMS Panel</div>
     </div>
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <div class="card-title">Web Sunucu</div>
+      <div class="card-val">Nginx</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🐘</div>
+      <div class="card-title">Dil</div>
+      <div class="card-val">PHP 8.3</div>
+    </div>
+  </div>
+
+  <div class="powered">
+    <div class="powered-row">
+      <span>Yönetim Altyapısı</span>
+      <span class="badge b-blue">GMS Panel</span>
+    </div>
+    <div class="powered-row">
+      <span>Hizmet Sağlayıcı</span>
+      <a href="https://gms.tr" class="badge b-teal" target="_blank">GMS Yazılım Danışmanlık</a>
+    </div>
+    <div class="powered-row">
+      <span>Geliştirme Desteği</span>
+      <a href="https://claude.ai" class="badge b-purple" target="_blank">✦ Claude AI</a>
+    </div>
+    <div class="powered-row">
+      <span>Sistem Durumu</span>
+      <span class="badge b-green">● Aktif</span>
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2026 <a href="https://gms.tr" target="_blank">GMS Yazılım Danışmanlık</a>
+    &mdash; Tüm hakları saklıdır.
+  </footer>
+
+</div>
+
 </body>
 </html>

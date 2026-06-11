@@ -1,7 +1,7 @@
 #!/bin/bash
 # GMS Panel - Yeni Hosting Hesabi Olustur
-# Kullanim: yeni-hesap.sh kullaniciadi domain.com php_versiyonu
-# Ornek   : yeni-hesap.sh ahmet ahmet.com 83
+# Kullanim: yeni-hesap.sh kullaniciadi domain.com php_versiyonu email ssl(0/1)
+# Ornek   : yeni-hesap.sh ahmet ahmet.com 83 ahmet@ahmet.com 1
 # PHP ver : 74, 80, 81, 82, 83, 84
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -9,12 +9,14 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 KULLANICI=$1
 DOMAIN=$2
 PHP=$3
+EMAIL=${4:-""}
+SSL_KUR=${5:-"0"}
 
 YASAK="gmssys root nginx apache mysql mariadb ftp mail www admin administrator test nobody daemon bin sys"
 
 # Parametre kontrolu
 if [ -z "$KULLANICI" ] || [ -z "$DOMAIN" ] || [ -z "$PHP" ]; then
-    echo "Kullanim: yeni-hesap.sh kullaniciadi domain.com php_versiyonu"
+    echo "Kullanim: yeni-hesap.sh kullaniciadi domain.com php_versiyonu [email] [ssl]"
     exit 1
 fi
 
@@ -77,9 +79,10 @@ POOL
 chown root:gmssys /etc/opt/remi/php${PHP}/php-fpm.d/${KULLANICI}.conf
 chmod 640 /etc/opt/remi/php${PHP}/php-fpm.d/${KULLANICI}.conf
 
-/usr/bin/systemctl restart php${PHP}-php-fpm
+# reload: graceful, panel ayakta kalir (restart yerine)
+/usr/bin/systemctl reload php${PHP}-php-fpm
 
-# Nginx vhost
+# Nginx vhost (HTTP)
 cat > /etc/nginx/conf.d/${DOMAIN}.conf << NGINX
 server {
     listen 80;
@@ -108,7 +111,18 @@ NGINX
 
 /usr/sbin/nginx -t && /usr/bin/systemctl reload nginx
 
-# MySQL kullanicisi ve yetkisi
+# Varsayilan site sablonunu kopyala (index.html + logo)
+SITE_DIR="/home/gmssys/gms-panel/site"
+if [ -f "${SITE_DIR}/index.html" ]; then
+    cp "${SITE_DIR}/index.html" /home/${KULLANICI}/public_html/index.html
+    chown ${KULLANICI}:${KULLANICI} /home/${KULLANICI}/public_html/index.html
+fi
+if [ -f "${SITE_DIR}/logo.png" ]; then
+    cp "${SITE_DIR}/logo.png" /home/${KULLANICI}/public_html/logo.png
+    chown ${KULLANICI}:${KULLANICI} /home/${KULLANICI}/public_html/logo.png
+fi
+
+# MySQL kullanicisi ve veritabani yetkisi
 DB_CONF="/etc/gms/db.conf"
 if [ -f "$DB_CONF" ]; then
     DB_ROOT=$(grep "^DB_ROOT=" "$DB_CONF" | cut -d'=' -f2-)
@@ -120,11 +134,12 @@ GRANT ALL PRIVILEGES ON \`${KULLANICI}\\_%\`.* TO '${KULLANICI}'@'localhost';
 FLUSH PRIVILEGES;
 SQLEOF
 
-    # Hesap bilgilerini kaydet
+    # Hesap bilgilerini kaydet (EMAIL dahil)
     cat > /etc/gms/users/${KULLANICI}.conf << CONF
 KULLANICI=${KULLANICI}
 DOMAIN=${DOMAIN}
 PHP=${PHP}
+EMAIL=${EMAIL}
 MYSQL_USER=${KULLANICI}
 MYSQL_SIFRE=${MYSQL_SIFRE}
 OLUSTURMA=$(date '+%d.%m.%Y %H:%M')
@@ -137,4 +152,19 @@ echo "[GMS] Tamamlandi!"
 echo "  Kullanici : $KULLANICI"
 echo "  Domain    : $DOMAIN"
 echo "  PHP       : $PHP"
+echo "  Email     : ${EMAIL:-'-'}"
 echo "  Klasor    : /home/$KULLANICI/public_html"
+
+# SSL sertifikasi kur (Let's Encrypt)
+if [ "$SSL_KUR" = "1" ]; then
+    echo ""
+    echo "[GMS] SSL sertifikasi olusturuluyor..."
+    SSL_EMAIL="${EMAIL:-admin@${DOMAIN}}"
+    /usr/bin/certbot --nginx \
+        -d "${DOMAIN}" -d "www.${DOMAIN}" \
+        --non-interactive \
+        --agree-tos \
+        -m "${SSL_EMAIL}" \
+        --redirect 2>&1
+    echo "[GMS] SSL islemi tamamlandi."
+fi

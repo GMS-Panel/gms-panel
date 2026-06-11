@@ -155,6 +155,88 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $out = shell_exec("/usr/bin/sudo /usr/bin/certbot renew 2>&1");
         $success = "Tum sertifikalar yenileme islemi tamamlandi.";
     }
+
+    // Ozel SSL sertifikasi yukle
+    if ($action === 'custom_ssl') {
+        $domain   = trim($_POST['domain'] ?? '');
+        $cert_pem = trim($_POST['cert_pem'] ?? '');
+        $key_pem  = trim($_POST['key_pem'] ?? '');
+
+        // Alt kullanici erisim kontrolu
+        if (is_user()) {
+            $conf_file = "/etc/nginx/conf.d/{$domain}.conf";
+            preg_match('|/home/([^/]+)/|', file_exists($conf_file) ? file_get_contents($conf_file) : '', $hm);
+            if (!hesap_erisim($hm[1] ?? '')) { $error = 'Bu domain icin yetkiniz yok.'; }
+        }
+
+        if (empty($error)) {
+            if (empty($domain) || empty($cert_pem) || empty($key_pem)) {
+                $error = 'Domain, sertifika ve anahtar alanlari zorunludur.';
+            } else {
+                // Sertifika klasorunu olustur
+                $ssl_dir  = "/etc/nginx/ssl/{$domain}";
+                $cert_yol = "{$ssl_dir}/fullchain.pem";
+                $key_yol  = "{$ssl_dir}/privkey.pem";
+                @mkdir($ssl_dir, 0700, true);
+
+                // PEM dosyalarini kaydet
+                file_put_contents($cert_yol, $cert_pem);
+                file_put_contents($key_yol, $key_pem);
+                chmod($cert_yol, 0644);
+                chmod($key_yol, 0600);
+
+                // Nginx config'e HTTPS blogu ekle
+                $conf_file = "/etc/nginx/conf.d/{$domain}.conf";
+                if (file_exists($conf_file)) {
+                    $conf_icerik = file_get_contents($conf_file);
+                    // Zaten HTTPS blogu var mi?
+                    if (strpos($conf_icerik, 'listen 443') === false) {
+                        $https_blok = "\nserver {\n"
+                            . "    listen 443 ssl;\n"
+                            . "    server_name {$domain} www.{$domain};\n"
+                            . "    ssl_certificate     {$cert_yol};\n"
+                            . "    ssl_certificate_key {$key_yol};\n"
+                            . "    ssl_protocols TLSv1.2 TLSv1.3;\n"
+                            . "    ssl_ciphers HIGH:!aNULL:!MD5;\n";
+                        // HTTP blokundaki location bloklarini kopyala
+                        if (preg_match('/root\s+([^;]+);/', $conf_icerik, $rm)) {
+                            $https_blok .= "    root {$rm[1]};\n"
+                                . "    index index.php index.html;\n";
+                        }
+                        if (preg_match('|/home/([^/]+)/|', $conf_icerik, $hm2)) {
+                            $https_blok .= "    access_log /home/{$hm2[1]}/logs/access.log;\n"
+                                . "    error_log  /home/{$hm2[1]}/logs/error.log;\n";
+                        }
+                        // PHP FPM socket
+                        if (preg_match('/fastcgi_pass\s+([^;]+);/', $conf_icerik, $fm)) {
+                            $https_blok .= "    location / { try_files \$uri \$uri/ /index.php?\$query_string; }\n"
+                                . "    location ~ \\.php\$ {\n"
+                                . "        fastcgi_pass {$fm[1]};\n"
+                                . "        fastcgi_index index.php;\n"
+                                . "        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;\n"
+                                . "        include fastcgi_params;\n"
+                                . "    }\n"
+                                . "    location ~ /\\.ht { deny all; }\n";
+                        }
+                        $https_blok .= "}\n";
+                        file_put_contents($conf_file, $conf_icerik . $https_blok);
+                    }
+                    // Nginx test + reload
+                    $nginx_test = shell_exec("/usr/bin/sudo /usr/sbin/nginx -t 2>&1");
+                    if (strpos($nginx_test, 'successful') !== false) {
+                        shell_exec("/usr/bin/sudo /usr/bin/systemctl reload nginx 2>/dev/null");
+                        $success = "{$domain} icin ozel SSL sertifikasi yuklendi ve aktif edildi.";
+                    } else {
+                        // Hata varsa eklenen blogu geri al
+                        file_put_contents($conf_file, $conf_icerik);
+                        $error = "Nginx config hatasi:<br><pre style='font-size:11px;margin-top:8px'>" . htmlspecialchars($nginx_test) . "</pre>";
+                    }
+                } else {
+                    $error = "Nginx config dosyasi bulunamadi: {$domain}";
+                }
+            }
+        }
+    }
 }
 
 $sertifikalar = get_certificates();
@@ -369,6 +451,73 @@ layout_head('SSL Yonetimi', 'ssl');
       </div>
 
       <button type="submit" class="btn btn-primary"><i class="ti ti-certificate"></i> SSL Al</button>
+    </form>
+  </div>
+</div>
+
+<!-- OZEL SSL SERTIFIKASI -->
+<div class="card" style="margin-top:16px">
+  <div class="card-head">
+    <div class="card-head-left">
+      <div class="card-head-icon" style="background:var(--amberbg)"><i class="ti ti-file-certificate" style="color:var(--amber)"></i></div>
+      <div>
+        <div class="card-head-title">Ozel SSL Sertifikasi Yukle</div>
+        <div class="card-head-sub">Kendi sertifikanizi (PEM formatinda) ekleyin</div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body">
+    <form method="POST" style="max-width:600px">
+      <input type="hidden" name="action" value="custom_ssl">
+
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">
+          <i class="ti ti-world" style="font-size:13px"></i> Domain
+        </label>
+        <select name="domain" required
+          style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;padding:10px 12px;outline:none">
+          <option value="">-- Domain secin --</option>
+          <?php foreach (glob('/etc/nginx/conf.d/*.conf') as $c):
+              $bn = basename($c, '.conf');
+              if (in_array($bn, ['00-default','php-fpm'])) continue;
+              $cc = file_get_contents($c);
+              if (is_user()) {
+                  preg_match('|/home/([^/]+)/|', $cc, $hmc);
+                  if (!hesap_erisim($hmc[1] ?? '')) continue;
+              }
+              if (!preg_match('/server_name\s+([^;\s]+)/', $cc, $snm)) continue;
+          ?>
+          <option value="<?= htmlspecialchars($snm[1]) ?>"><?= htmlspecialchars($snm[1]) ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">
+          <i class="ti ti-certificate" style="font-size:13px"></i> Sertifika (Certificate + CA Chain) — PEM
+        </label>
+        <textarea name="cert_pem" rows="6" required
+          placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:12px;font-family:monospace;padding:10px 12px;outline:none;resize:vertical"></textarea>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">fullchain.pem — sertifikanizi ve varsa ara sertifikalari (CA chain) birlikte yapistirin.</div>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">
+          <i class="ti ti-key" style="font-size:13px"></i> Ozel Anahtar (Private Key) — PEM
+        </label>
+        <textarea name="key_pem" rows="6" required
+          placeholder="-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:12px;font-family:monospace;padding:10px 12px;outline:none;resize:vertical"></textarea>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">privkey.pem — sertifika ile eslesen ozel anahtarinizi yapistirin.</div>
+      </div>
+
+      <div style="background:var(--amberbg);border:1px solid rgba(245,158,11,.3);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--amber);margin-bottom:16px;display:flex;gap:8px">
+        <i class="ti ti-shield-lock" style="font-size:14px;flex-shrink:0"></i>
+        Ozel anahtar sunucuda guvenli sekilde saklanir. Sertifika suresi dolunca bu formu tekrar kullanabilirsiniz.
+      </div>
+
+      <button type="submit" class="btn btn-primary"><i class="ti ti-upload"></i> Sertifikayi Yukle ve Aktif Et</button>
     </form>
   </div>
 </div>

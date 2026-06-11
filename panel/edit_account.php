@@ -37,6 +37,17 @@ foreach (glob('/etc/nginx/conf.d/*.conf') as $conf) {
 // Disk kullanimi
 $disk = trim(shell_exec("du -sh /home/{$user} 2>/dev/null | cut -f1"));
 
+// Hesap config'inden email oku
+$hesap_conf = "/etc/gms/users/{$user}.conf";
+$mevcut_email = '';
+if (file_exists($hesap_conf)) {
+    foreach (file($hesap_conf, FILE_IGNORE_NEW_LINES) as $satir) {
+        if (strpos($satir, 'EMAIL=') === 0) {
+            $mevcut_email = substr($satir, 6);
+        }
+    }
+}
+
 // POST islemleri
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -90,6 +101,27 @@ pm.max_spare_servers = 3
         }
     }
 
+    // Email guncelle
+    if ($action === 'email') {
+        $yeni_email = trim($_POST['email'] ?? '');
+        if (file_exists($hesap_conf)) {
+            $satirlar = file($hesap_conf, FILE_IGNORE_NEW_LINES);
+            // EMAIL satirini guncelle veya ekle
+            $bulundu = false;
+            foreach ($satirlar as &$satir) {
+                if (strpos($satir, 'EMAIL=') === 0) {
+                    $satir   = 'EMAIL=' . $yeni_email;
+                    $bulundu = true;
+                }
+            }
+            unset($satir);
+            if (!$bulundu) $satirlar[] = 'EMAIL=' . $yeni_email;
+            file_put_contents($hesap_conf, implode("\n", $satirlar) . "\n");
+            $mevcut_email = $yeni_email;
+            $success = 'E-posta guncellendi.';
+        }
+    }
+
     // Hesabi sil
     if ($action === 'delete' && ($_POST['confirm'] ?? '') === $user) {
         // Hesap sil scriptini calistir
@@ -126,6 +158,31 @@ layout_head('Hesap Duzenleme: ' . $user, 'accounts');
   <i class="ti ti-circle-check" style="font-size:16px"></i> <?= htmlspecialchars($success) ?>
 </div>
 <?php endif; ?>
+
+<!-- EMAIL -->
+<div class="card" style="margin-bottom:16px">
+  <div class="card-head">
+    <div class="card-head-left">
+      <div class="card-head-icon" style="background:var(--bluebg)"><i class="ti ti-mail" style="color:var(--blue)"></i></div>
+      <div>
+        <div class="card-head-title">E-posta</div>
+        <div class="card-head-sub">Iletisim ve SSL sertifikasi icin kullanilir</div>
+      </div>
+    </div>
+  </div>
+  <div class="card-body">
+    <form method="POST">
+      <input type="hidden" name="action" value="email">
+      <div style="display:flex;gap:10px;align-items:center">
+        <input type="text" name="email"
+          value="<?= htmlspecialchars($mevcut_email) ?>"
+          placeholder="ornek: musteri@domain.com"
+          style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;padding:9px 12px;outline:none">
+        <button type="submit" class="btn btn-primary"><i class="ti ti-device-floppy"></i> Kaydet</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <!-- PHP VERSIYON -->
 <div class="card" style="margin-bottom:16px">

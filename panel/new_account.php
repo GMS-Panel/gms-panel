@@ -5,15 +5,18 @@ require_once 'layout.php';
 
 $error   = '';
 $success = '';
+$ssl_log = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $kullanici = trim($_POST['kullanici'] ?? '');
     $domain    = trim($_POST['domain'] ?? '');
     $php       = trim($_POST['php'] ?? '');
+    $email     = trim($_POST['email'] ?? '');
+    $ssl_kur   = isset($_POST['ssl_kur']) ? '1' : '0';
 
     // Validasyon
     if (empty($kullanici) || empty($domain) || empty($php)) {
-        $error = 'Tum alanlar doldurulmalidir.';
+        $error = 'Kullanici adi, domain ve PHP versiyonu zorunludur.';
     } elseif (!preg_match('/^[a-z0-9_]{3,32}$/', $kullanici)) {
         $error = 'Kullanici adi: sadece kucuk harf, rakam ve alt cizgi (3-32 karakter).';
     } elseif (!preg_match('/^[a-z0-9.-]+\.[a-z]{2,}$/', $domain)) {
@@ -23,18 +26,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (is_dir('/home/' . $kullanici)) {
         $error = "'{$kullanici}' kullanicisi zaten mevcut.";
     } else {
-        // Scripti calistir
+        // Hesap olustur: kullanici domain php email ssl
         $cmd    = "/usr/bin/sudo /usr/local/bin/yeni-hesap.sh "
                 . escapeshellarg($kullanici) . " "
                 . escapeshellarg($domain) . " "
-                . escapeshellarg($php)
+                . escapeshellarg($php) . " "
+                . escapeshellarg($email) . " "
+                . escapeshellarg($ssl_kur)
                 . " 2>&1";
         $output = shell_exec($cmd);
 
         if (is_dir('/home/' . $kullanici)) {
-            // PHP versiyon formatla: "83" -> "8.3"
             $php_fmt = substr($php, 0, 1) . '.' . substr($php, 1);
             $success = "Hesap basariyla olusturuldu: <strong>{$kullanici}</strong> / {$domain} / PHP {$php_fmt}";
+            // SSL kurulduysa certbot ciktisini goster
+            if ($ssl_kur === '1') {
+                $ssl_log = $output;
+            }
         } else {
             $error = "Hesap olusturulamadi. Cikti:<br><pre style='margin-top:8px;font-size:11px'>"
                    . htmlspecialchars($output) . "</pre>";
@@ -65,17 +73,23 @@ layout_head('Yeni Hesap', 'accounts');
 </div>
 
 <?php if ($error): ?>
-<div style="background:var(--redbg);border:1px solid rgba(239,68,68,.3);border-radius:var(--radius);padding:12px 16px;font-size:13px;color:var(--red);margin-bottom:20px;display:flex;gap:10px;align-items:flex-start">
-  <i class="ti ti-alert-circle" style="font-size:16px;flex-shrink:0;margin-top:1px"></i>
+<div class="alert-box alert-error" style="margin-bottom:20px">
+  <i class="ti ti-alert-circle" style="font-size:16px;flex-shrink:0"></i>
   <span><?= $error ?></span>
 </div>
 <?php endif; ?>
 
 <?php if ($success): ?>
-<div style="background:var(--greenbg);border:1px solid rgba(34,197,94,.3);border-radius:var(--radius);padding:12px 16px;font-size:13px;color:var(--green);margin-bottom:20px;display:flex;gap:10px;align-items:center">
+<div class="alert-box alert-success" style="margin-bottom:16px">
   <i class="ti ti-circle-check" style="font-size:16px;flex-shrink:0"></i>
   <span><?= $success ?></span>
 </div>
+<?php if ($ssl_log): ?>
+<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px">
+  <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">SSL Kurulum Ciktisi</div>
+  <pre style="font-size:11px;color:var(--text2);white-space:pre-wrap;overflow-x:auto"><?= htmlspecialchars($ssl_log) ?></pre>
+</div>
+<?php endif; ?>
 <div style="margin-bottom:20px">
   <a href="accounts.php" class="btn btn-primary"><i class="ti ti-users"></i> Hesaplara Don</a>
   <a href="new_account.php" class="btn" style="margin-left:8px"><i class="ti ti-plus"></i> Yeni Hesap Daha</a>
@@ -92,9 +106,10 @@ layout_head('Yeni Hesap', 'accounts');
   <div class="card-body">
     <form method="POST">
 
+      <!-- Kullanici Adi -->
       <div style="margin-bottom:18px">
         <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">
-          <i class="ti ti-user" style="font-size:13px"></i> Kullanici Adi
+          <i class="ti ti-user" style="font-size:13px"></i> Kullanici Adi <span style="color:var(--red)">*</span>
         </label>
         <input type="text" name="kullanici" placeholder="ornek: ahmet"
           value="<?= htmlspecialchars($_POST['kullanici'] ?? '') ?>"
@@ -104,9 +119,21 @@ layout_head('Yeni Hesap', 'accounts');
         <div style="font-size:11px;color:var(--text3);margin-top:4px">Sadece kucuk harf, rakam ve alt cizgi. Linux kullanici adi olarak kullanilir.</div>
       </div>
 
+      <!-- E-posta -->
       <div style="margin-bottom:18px">
         <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">
-          <i class="ti ti-world" style="font-size:13px"></i> Domain
+          <i class="ti ti-mail" style="font-size:13px"></i> E-posta
+        </label>
+        <input type="text" name="email" placeholder="ornek: ahmet@musteri.com"
+          value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;padding:10px 12px;outline:none">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Iletisim ve SSL sertifikasi icin kullanilir.</div>
+      </div>
+
+      <!-- Domain -->
+      <div style="margin-bottom:18px">
+        <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">
+          <i class="ti ti-world" style="font-size:13px"></i> Domain <span style="color:var(--red)">*</span>
         </label>
         <input type="text" name="domain" id="domain" placeholder="ornek: musteri.com"
           value="<?= htmlspecialchars($_POST['domain'] ?? '') ?>"
@@ -115,9 +142,10 @@ layout_head('Yeni Hesap', 'accounts');
         <div style="font-size:11px;color:var(--text3);margin-top:4px">www olmadan girin. Nginx her iki sekilde de yanitlar.</div>
       </div>
 
-      <div style="margin-bottom:24px">
+      <!-- PHP Versiyonu -->
+      <div style="margin-bottom:18px">
         <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">
-          <i class="ti ti-brand-php" style="font-size:13px"></i> PHP Versiyonu
+          <i class="ti ti-brand-php" style="font-size:13px"></i> PHP Versiyonu <span style="color:var(--red)">*</span>
         </label>
         <select name="php" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;padding:10px 12px;outline:none">
           <?php foreach ($php_versiyonlar as $val => $label): ?>
@@ -126,6 +154,23 @@ layout_head('Yeni Hesap', 'accounts');
           </option>
           <?php endforeach; ?>
         </select>
+      </div>
+
+      <!-- SSL Sec -->
+      <div style="margin-bottom:24px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
+        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+          <input type="checkbox" name="ssl_kur" value="1"
+            <?= (($_POST['ssl_kur'] ?? '') ? 'checked' : '') ?>
+            style="margin-top:2px;width:16px;height:16px;accent-color:var(--blue);flex-shrink:0">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">
+              <i class="ti ti-lock" style="color:var(--green)"></i> SSL Sertifikasi Olustur (Let's Encrypt)
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px">
+              Domain DNS'i bu sunucuya yonlendirilmis olmalidir. E-posta alanindaki adres kullanilir.
+            </div>
+          </div>
+        </label>
       </div>
 
       <!-- Onizleme -->
