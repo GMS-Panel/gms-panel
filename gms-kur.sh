@@ -892,7 +892,7 @@ ozet_goster() {
     echo "   Fail2ban : Aktif"
     echo ""
     echo -e " ${CYAN}Panel Guncelleme (deploy):${SIFIRLA}"
-    echo "   curl -fsSL https://github.com/GMS-Panel/gms-panel/archive/refs/heads/main.tar.gz | tar -xz -C /tmp/ && cp -rf /tmp/gms-panel-main/. /home/${GMS_SYS_USER}/gms-panel/ && rm -rf /tmp/gms-panel-main"
+    echo "   curl -fsSL https://github.com/GMS-Panel/gms-panel/archive/refs/heads/main.tar.gz | tar -xz -C /tmp/ && \\cp -rf /tmp/gms-panel-main/. /home/${GMS_SYS_USER}/gms-panel/ && rm -rf /tmp/gms-panel-main"
     echo ""
     echo -e " ${SARI}[!!] Panel sifrenizi guvenli bir yere kaydedin!${SIFIRLA}"
     echo ""
